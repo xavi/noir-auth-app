@@ -68,9 +68,11 @@ When logging in, the user id is stored in the session object. If the account is 
 
 If credentials are incorrect, an appropriate message is displayed. If the username, or email, corresponds to an account that has not been activated, then a link to resend the activation code (`/resend-activation?email=:email`) is provided.
 
-#### `GET /logout`
+#### `POST /logout`
 
 Clears the session object (which contains the id of the logged in account and a key indicating that it's an admin account if that's the case) to log out the account and redirects to `/`.
+
+The reason why logouts are handled through HTTP POST instead of GET is to avoid that someone could log out a user by having him load a page containing an image tag like `<img src="http://example.com/logout" />`.
 
 #### `GET /settings`
 
@@ -188,7 +190,7 @@ First, start MongoDB.
 
 Create a file named `.env` in the app's root directory to store all the required configuration variables, which will be automatically read into environment variables when the app is started with Foreman (noir-auth-app follows the [twelve-factor methodology](http://www.12factor.net/)), and finally read by the app code. This is an example of the `.env` file with all the required configuration vars:
 
-    MONGOLAB_URI=mongodb://localhost
+    MONGODB_URI=mongodb://localhost
     SMTP_SERVER=smtp.example.com
     SMTP_USERNAME=admin@example.com
     SMTP_PASSWORD=example_password

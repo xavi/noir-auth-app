@@ -62,18 +62,12 @@
   ; If global connection doesn't exist yet
   ; https://github.com/aboekhoff/congomongo/blob/master/src/somnium/congomongo.clj
   (when-not (connection? *mongo-config*)
-    ; #TODO: replace MONGOLAB_URI with MONGODB_URI? It seems that MONGOLAB_URI
-    ; is set automatically in Heroku when adding the add-on
-    ;   https://devcenter.heroku.com/articles/mongolab
-    ; See also
-    ;   http://clojuremongodb.info/articles/connecting.html#connecting_via_uri_eg_mongohq_or_mongolab_on_heroku
-    ;
     ; Reads the environment variable containing the MongoDB connection URI.
     ; In Heroku this is set using
-    ;   heroku config:add MONGOLAB_URI=mongodb://username:password@example.com/dbname
+    ;   heroku config:add MONGODB_URI=mongodb://username:password@example.com/dbname
     ; When running the app locally, this can be set in a .env file, which will
     ; be automatically read when starting the app with Foreman (foreman start).
-    (let [mongo-url (get (System/getenv) "MONGOLAB_URI")]
+    (let [mongo-url (get (System/getenv) "MONGODB_URI")]
 
       ; Looking at the logs, I see that *mongo-config* persists through
       ; requests (at least when running in my dev box).
