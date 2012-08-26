@@ -180,7 +180,7 @@ Clone the repository from GitHub using git:
 
     git clone git://github.com/xavi/noir-auth-app.git
 
-or download a zipball of the master branch (TODO: create that).
+or use the ZIP button above to download the code as a zip file.
 
 To run it locally you need [MongoDB](http://www.mongodb.org/), [Clojure](http://clojure.org/), [Leiningen](https://github.com/technomancy/leiningen) and [Foreman](https://github.com/ddollar/foreman) (the latter not strictly necessary but recommended).
 
