@@ -1,0 +1,141 @@
+/*
+  By setting font-size to 100% we're setting our base type size to the
+  browser's default, which in most cases is 16 pixels. We can then use
+  ems to size text up or down from that relative baseline.
+  See p. 18 of Ethan Marcotte's "Responsive Web Design" 
+*/
+body {
+  /* http://www.w3schools.com/cssref/pr_font_font.asp */
+  font: normal 100% Verdana, sans-serif;
+}
+
+code {
+  /*
+    The double monospace is necessary for Chrome, Firefox, Safari,
+    and Mobile Safari, to not display this text in smaller size.
+    In IE 8, there's no difference between one monospace and double
+    monospace.
+    http://code.stephenmorley.org/html-and-css/fixing-browsers-broken-monospace-font-handling/
+    http://pinboard.in/u:xavi/t:monospace/
+  */
+  font-family: monospace, monospace;
+}
+
+/* See p. 30 of Ethan Marcotte's "Responsive Web Design" */
+#page {
+	margin: 36px auto;
+	width: 90%;
+}
+
+.nav {
+  float: right;
+  /* 1.5em == 24px, same distance as between a submit button and the next text
+     field (as margin-bottom for input[type="submit"] is 1em, but these are
+     enclosedin paragraph elements (p) with a margin-bottom of 0.5em)
+   */
+  margin-bottom: 1.5em;  
+}
+
+/*
+ Displaying the list items as inline is the simplest method to make the list
+ horizontal, see
+ + Creating a Horizontal Nav Bar in Andy Budd's 
+ "CSS Mastery: Advanced Web Standards Solutions"
+ + http://www.w3schools.com/css/css_navbar.asp
+*/
+.nav li {
+  display: inline;
+  padding: 0 1em;
+}
+.nav li:last-child {
+  padding-right: 0;
+}
+
+.content {
+  clear: right;
+}
+
+p {
+  margin-bottom: 0.5em;
+}
+
+.notice {
+  margin-bottom: 1em;
+}
+
+/*
+  Make targets fingertip-size, i.e. 44x44 points, as per Apple's 
+  iOS Human Interface Guidelines
+http://developer.apple.com/library/ios/#documentation/UserExperience/Conceptual/MobileHIG/UEBestPractices/UEBestPractices.html#//apple_ref/doc/uid/TP40006556-CH20-SW20
+  1px*2 (border) + 12px*2 (border) + 18px (computed height) = 44px
+*/
+input {
+  /* Sets size to browser's default (usually 16px). This works for all input
+   elements in Firefox, but it doesn't work for input[type="submit"] elements
+   in WebKit browsers (unless '-webkit-appearance' is also used, see below) */
+  font-size: 100%;
+  margin: 0;
+  border: 0.0625em solid LightGray;  /* 1px */
+  padding: 0.75em; /* 12px */
+  width: 14.875em; /* 238px => 1em == 16px */
+}
+
+/*
+  Because submit elements seem to interpret 'width' differently than the rest
+  of the 'input' elements (styled above), they have to be handled specifically
+  if we want them to have the same width as the other 'input' elements.
+  In particular, the total width of a submit element is equal to the width
+  specified in 'width', independently of 'border' and 'padding', while the
+  total width of other 'input' elements is the sum of 'border' (x2),
+  'padding' (x2) and 'width'.
+  The interpretation of the width, border, padding... has to do with the
+  "box model"
+    http://www.css3.info/preview/box-sizing/
+*/
+input[type="submit"] {
+  -webkit-appearance: none;
+  background-color: LightGray;
+  /* for submit elements like this the specified 'width' is the total width of
+   the element, independently of 'border' and 'padding'*/
+  margin: 1em 0 1em 0;
+  border: 0;
+  padding: 0.8125em; /* 13px */
+  width: 16.5em; /* 264px */
+  cursor: pointer;
+}
+
+/* 
+  Button links
+  p. 76 of Andy Budd's "CSS Mastery: Advanced Web Standards Solutions"
+
+  Before, the total height of the button depended on the height that the
+  browser was giving to the inside text, but then the button had a height
+  of 45 pixels in Chrome, instead of the expected 44 pixels obtained for
+  real buttons (input[type="submit"]) with the same border and padding.
+  Apparently, this is because of how each rendering engine implements line
+  height. To work around this, the line-height is reset to normal (by setting
+  it to 1, which means a line height of 1 multiplied by the element's
+  font-size
+    http://www.w3.org/TR/CSS2/visudet.html#leading
+  so 16px, because in this case the element's font-size is the browser's
+  default, which is usually 16px) and padding is adjusted to get the desired
+  height (44px).
+  http://stackoverflow.com/a/7856737/974795
+*/
+a.button {
+  display: block;
+  background-color: LightGray;
+  margin: 1em 0 1em 0;
+  border: 0;
+  padding: 0.875em 0.8125em; /* 14px 13px */
+  width: 14.875em; /* 238px => 1em == 16px */
+  line-height: 1;
+  text-align: center;
+  color: black;
+  text-decoration: none;
+}
+
+a.button.signup {
+  margin-top: 1.5em;
+}
+

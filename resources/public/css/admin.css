@@ -1,0 +1,144 @@
+/*
+  By setting font-size to 100% we're setting our base type size to the
+  browser's default, which in most cases is 16 pixels. We can then use
+  ems to size text up or down from that relative baseline.
+  See p. 18 of Ethan Marcotte's "Responsive Web Design" 
+
+  ; Already in default.css
+  body {
+    ; http://www.w3schools.com/cssref/pr_font_font.asp
+    font: normal 100% Verdana, sans-serif;
+  }
+
+*/
+
+/* 
+  Overwrites settings from default.css, removing left and right margins, so
+  that more data can be displayed (specially useful to display lots of tabular
+  data in small mobile screens).
+  No need to remove the right margin from the navigation menu though, so to
+  keep it exactly in the same place as in other pages, an appropriate right
+  margin is set.
+*/
+#page {
+  width: 100%;
+}
+.nav {
+  margin-right: 5%;
+}
+
+/*
+  There are many methods that can be used to making a horizontal list. The main
+  ingredient is "display: inline", applied to the "LI" element.
+  http://css.maxdesign.com.au/listutorial/horizontal_master.htm
+
+  ; this element doesn't exist anymore
+  #header ul li {
+    ; float: left;
+    display: inline;
+    margin-left: 15px;
+  }
+
+
+*/
+
+/* http://www.w3schools.com/css/css_table.asp */
+table { 
+  margin-top: 20px;
+  margin-bottom: 10px;
+  /* 
+    Given that the CSS spec says 
+    "On a block container element whose content is composed of inline-level
+    elements, 'line-height' specifies the minimal height of line boxes within
+    the element."
+    http://www.w3.org/TR/CSS2/visudet.html#line-height
+    I do not understand why, with the line-height in <table>, the min-height
+    on <td> (see below) is required, but it is.
+
+    See http://dbushell.com/demos/tables/rt_05-01-12.html
+  */
+  width: 100%;
+  font-size: 0.75em;  /* 12px */
+  line-height: 1.25em;
+  border-collapse: collapse;
+  border-spacing: 0;  
+}
+
+th, td {
+  border: 1px solid black;
+  /*
+   5px, because this is relative to the parent table element which has a
+   size of 12px, so 12*0.416666667 == 5px
+  */
+  /*padding: 0.416666667em; */
+  padding: 0.416666667em 0.166666667em; /* top-bottom 5/12, right-left 2/12 */
+}
+th { text-align: left; background-color: lightgrey; }
+tr:hover { background-color: GreenYellow; /*gold;*/ }
+
+
+/*
+  Uses David Bushell's technique for responsive tables
+  http://dbushell.com/2012/01/05/responsive-tables-2/
+
+  This media query asks the browser to render the enclosed CSS only if its
+  viewport is no wider than 40em (640 pixels).
+  See the section "Media queries in action" in Ethan Marcotte's
+  "Responsive Web Design".
+*/
+@media only screen and (max-width: 160em) { /*2560px*/
+
+  table { display: block; position: relative; width: 100%; }
+  thead { display: block; float: left; }
+  tbody {
+    display: block;
+    width: auto;
+    position: relative;
+    overflow-x: auto;
+    white-space: nowrap; 
+  }
+  thead tr { display: block; }
+  /* displays header cells in a column instead of a row */
+  th { 
+    display: block;
+    text-align: right;
+    /* 108px, as this is relative to the table 0.75em, i.e. 12px */
+    max-width: 9em;
+    /* 
+      without this, if the header contains an ellipsis, it may be wrapped
+      after the ellipsis
+    */
+    white-space: nowrap;
+  }
+  tbody tr { display: inline-block; vertical-align: top; }
+  /* displays data cells of each <tr> in a column instead of a row */
+  td { 
+    display: block;
+    /* avoids the collapsing of empty cells */
+    min-height: 1.25em;
+    /* 
+      Without this, Mobile Safari was displaying data cells with a different
+      font-size than header cells. That's because there were data cells wider
+      than 320px and Mobile Safari automatically increases the font-size for
+      blocks wider than that, see
+      http://stackoverflow.com/q/5303263/974795
+      OTOH, limiting the width to exactly 320px was not enough to fix the
+      problem, that's why the width is set to a slightly smaller size.
+    */
+    width: 25em;  /* 320/12 == 26.6666667em */
+    /* http://www.quirksmode.org/css/textoverflow.html */
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  
+  /* sort out borders */
+
+  th { border-bottom: 0; }
+  td { border-left: 0; border-right: 0; border-bottom: 0; }
+  tbody tr { border-right: 1px solid black; }
+  th:last-child,
+  td:last-child { border-bottom: 1px solid black; }
+
+}
