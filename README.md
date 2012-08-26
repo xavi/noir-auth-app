@@ -14,7 +14,7 @@ It features...
 + a minimal, responsive web UI
 + an admin web UI (also minimal and responsive :)
 
-See the [URL Tour](#url tour) for a more detailed look at the functionality.
+See the [URL Tour](#url-tour) for a more detailed look at the functionality.
 
 Besides [Noir](http://webnoir.org/), noir-auth-app also uses [CongoMongo](https://github.com/aboekhoff/congomongo) to interact with the database and [Postal](https://github.com/drewr/postal) to send emails.
 
