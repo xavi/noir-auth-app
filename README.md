@@ -190,10 +190,10 @@ First, start MongoDB.
 
 Create a file named `.env` in the app's root directory to store all the required configuration variables, which will be automatically read into environment variables when the app is started with Foreman (noir-auth-app follows the [twelve-factor methodology](http://www.12factor.net/)), and finally read by the app code. This is an example of the `.env` file with all the required configuration vars:
 
-    MONGODB_URI=mongodb://localhost
+    MONGODB_URI=mongodb://localhost/example-db-name
     SMTP_SERVER=smtp.example.com
     SMTP_USERNAME=admin@example.com
-    SMTP_PASSWORD=example_password
+    SMTP_PASSWORD=example-password
     EMAILS_FROM="Example <admin@example.com>"
     CONTACT_EMAIL=hello@example.com
 
