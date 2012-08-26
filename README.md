@@ -18,9 +18,7 @@ See the [URL Tour](#url tour) for a more detailed look at the functionality.
 
 Besides [Noir](http://webnoir.org/), noir-auth-app also uses [CongoMongo](https://github.com/aboekhoff/congomongo) to interact with the database and [Postal](https://github.com/drewr/postal) to send emails.
 
-
-
-TODO: change the email address in git to xavi@caballe.pro
+You can see the app running at http://noir-auth-app.herokuapp.com .
 
 
 ## URL Tour
