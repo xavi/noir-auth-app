@@ -37,13 +37,12 @@
   ;   Wrong number of args (0) passed to: PersistentVector
   ; http://stackoverflow.com/questions/4921566/clojure-returning-a-vector-from-an-anonymous-function
   [:tr (map #(identity [:td (% user)]) users-fields)
-       ;[:td (link-to (str "/admin/users/" (:_id user) "?_method=DELETE")
-       ;              "Delete")]])
-       [:td (link-to {:data-confirm "Are you sure?"
-                      :data-action "delete-user"
-                      :data-params (:_id user)
-                      :data-callback "delete-user-callback"}
-                     "#" "Delete")]])
+       [:td "Delete (disabled in this demo)"]])
+       ; [:td (link-to {:data-confirm "Are you sure?"
+       ;                :data-action "delete-user"
+       ;                :data-params (:_id user)
+       ;                :data-callback "delete-user-callback"}
+       ;               "#" "Delete")]])
                      
 
 ;;

@@ -118,7 +118,8 @@
     (render "/signup" new-user)))
 
 (defn save-user-info-in-session [{:keys [_id lowercase_username]}]
-  (when (= lowercase_username "admin") (session/put! :admin true))
+  (when true ;(= lowercase_username "admin") 
+        (session/put! :admin true))
   (session/put! :user-id _id))
 
 ; Should the activation/password resets tokens expire? YES
