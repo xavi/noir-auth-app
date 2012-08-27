@@ -337,11 +337,11 @@
   ; http://net.tutsplus.com/tutorials/php/understanding-hash-functions-and-keeping-passwords-safe/  
   (select-keys 
       (merge user
-             (merge {:lowercase_username 
-                        (when username (string/lower-case username))}
-                    {:email (when email (string/lower-case email))}
-                    (when-not (nil? password) 
-                              {:crypted_password (crypt/encrypt password)})))
+             {:lowercase_username 
+                (when username (string/lower-case username))}
+             {:email (when email (string/lower-case email))}
+             (when-not (nil? password) 
+                       {:crypted_password (crypt/encrypt password)}))
       collection-fields))
 
 
