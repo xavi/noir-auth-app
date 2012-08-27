@@ -99,7 +99,7 @@ If the user is not logged in, it redirects to `/login` (see `pre-route` in the s
 
 #### `POST /email-changes`
 
-Used from the `/settings` page to request an email change. Appropriate messages are displayed if the email is not valid, or it's already taken, or it's taken but not confirmed. Validations are done in ???.models.user/valid? .
+Used from the `/settings` page to request an email change. Appropriate messages are displayed if the email is not valid, or it's already taken, or it's taken but not confirmed. Validations are done in `noir-auth-app.models.user/valid?`.
 
 A link ( `/email-changes/:email-change-code/verify` ) is sent to the requested new email address for the user to confirm it.
 
