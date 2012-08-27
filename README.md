@@ -24,6 +24,8 @@ You can see the app running at http://noir-auth-app.herokuapp.com .
 ## URL Tour
 
 
+### Home
+
 #### `GET /`
 
 If user is not logged in, it displays a generic welcome message and a login link.
@@ -31,6 +33,9 @@ If user is not logged in, it displays a generic welcome message and a login link
 If user is logged in, it displays a personalized greeting and links to settings and logout.
 
 If there's a message in the [flash](http://webnoir.org/tutorials/sessions), it's also displayed.
+
+
+### Signup
 
 #### `GET /signup`
 
@@ -54,6 +59,9 @@ Looks up the email in the database and if corresponds to a not yet activated acc
 
 If the email is not found or it corresponds to an already activated account, an appropriate message is displayed.
 
+
+### Login/Logout
+
 #### `GET /login`
 
 Shows the login form if not logged in, otherwise redirects to `/`.
@@ -71,6 +79,9 @@ If credentials are incorrect, an appropriate message is displayed. If the userna
 Clears the session object (which contains the id of the logged in account and a key indicating that it's an admin account if that's the case) to log out the account and redirects to `/`.
 
 The reason why logouts are handled through HTTP POST instead of GET is to avoid that someone could log out a user by having him load a page containing an image tag like `<img src="http://example.com/logout" />`.
+
+
+### Settings
 
 #### `GET /settings`
 
@@ -117,6 +128,16 @@ Used from the `/settings` page to change the password of the logged in account. 
 The password is checked for length, then the user is redirected to `/settings` and, if there are errors, appropriate messages are shown.
 
 
+<h4><code>POST /_fetch</code><br>
+<code>remote=delete-account&params=nil</code></h4>
+
+This is handled by `(defremote delete-account ...)`. It deletes the logged in user and clears the session.
+
+When following the "delete account" link in the Settings page, ClojureScript code shows an alert asking for confirmation, and if the user confirms it, `remote-callback` (from Chris Granger's [fetch library](https://github.com/ibdknox/fetch)) is used to call the `delete-account` function in the server (internally, `remote-callback` makes the HTTP POST to run the remote function).
+
+
+### Password resets
+
 #### `GET /password-resets`
 
 This is the URL of the "forgot password?" link. Shows a form asking for the email address of the account whose password has to be reset.
@@ -142,19 +163,13 @@ The form to reset a password using a reset code (`/password-resets/:reset-code/e
 If the reset code is found and has not expired, and the new password is valid, then the password is reset and the user is redirected to `/login`. If, instead, there are errors, then the form to reset the password is rendered with the corresponding error messages.
 
 
+### Admin
+
 #### `GET /admin`
 
 It shows the admin interface if the logged in account is an admin account, otherwise redirects to `/login`. (Logged in admin accounts can be distinguished by having a "truthy" value in the session's :admin key, see `POST /login`.)
 
 The admin interface shows a paged list of all users ordered by creation date from the most recent to the oldest. The list is paged by date instead of page number. This means that it can be browsed by date using the URL-based interface provided by this pagination. For example, to get a paged list with the users created before a given datetime, just specify the datetime (in [ISO 8601](http://en.wikipedia.org/wiki/ISO_8601)) with an `until` parameter in the URL, like this: `/admin?until=2012-08-05T19:29Z`. If specifying a positive time offset from UTC, remember to URL encode the "+" (`%2B`), otherwise it will be interpreted as a space (ex. `/admin?until=2012-08-05T19:29%2B02:00`).
-
-
-<h4><code>POST /_fetch</code><br>
-<code>remote=delete-account&params=nil</code></h4>
-
-This is handled by `(defremote delete-account ...)`. It deletes the logged in user and clears the session.
-
-When following the "delete account" link in the Settings page, ClojureScript code shows an alert asking for confirmation, and if the user confirms it, `remote-callback` (from Chris Granger's [fetch library](https://github.com/ibdknox/fetch)) is used to call the `delete-account` function in the server (internally, `remote-callback` makes the HTTP POST to run the remote function).
 
 
 <h4><code>POST /_fetch</code><br>
