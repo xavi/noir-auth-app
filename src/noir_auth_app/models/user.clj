@@ -337,20 +337,6 @@
   ; http://net.tutsplus.com/tutorials/php/understanding-hash-functions-and-keeping-passwords-safe/  
   (select-keys 
       (merge user
-             ; Like Rails' Active Record automatic timestamps, :updated_at is
-             ; set with the current time whenever the record is saved, i.e.
-             ; not only on updates, but also when the record is created.
-             ; http://api.rubyonrails.org/classes/ActiveRecord/Timestamp.html
-             ;
-
-             ;
-             ; (java.util.Date.)  <-- now, it's in UTC even although it's displayed in the user's time zone
-             ; To display it in UTC:
-             ; (import '(java.text SimpleDateFormat))
-             ; (import '(java.util TimeZone))
-             ; (def sdf (new SimpleDateFormat "yyyy-MM-dd HH:mm:ss")) 
-             ; (. sdf setTimeZone (. TimeZone getTimeZone "UTC"))
-             ; (. sdf format (java.util.Date.))
              (merge {:lowercase_username 
                         (when username (string/lower-case username))}
                     {:email (when email (string/lower-case email))}
