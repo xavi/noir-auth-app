@@ -154,19 +154,6 @@
   
   ; Activation_code should be unique. This is enforced here and also at the
   ; database level (see the maybe-init function in this same namespace).
-  ;
-  ; Authlogic for example uses Rails' validates_uniqueness_of in combination
-  ; with dirty objects...
-  ; https://github.com/binarylogic/authlogic/blob/master/lib/authlogic/acts_as_authentic/perishable_token.rb#L48
-  ; http://api.rubyonrails.org/classes/ActiveModel/Dirty.html
-  ; In Restful Authentication uniqueness is not checked...
-  ; https://github.com/technoweenie/restful-authentication/blob/master/generators/authenticated/templates/model.rb
-  ; As noted in http://stackoverflow.com/a/6128878/974795 , Devise does it differently
-  ; https://github.com/plataformatec/devise/blob/master/lib/devise/models/authenticatable.rb#L221
-  ;
-  ; In Clojure, both nil and false are treated as "false" and everything else
-  ; is treated as true.
-  ;
   (when activation_code
         (validate-uniqueness
             user
@@ -574,6 +561,17 @@
   "It generates an activation code, stores it under the :activation_code key,
   and it also stores a timestamp of the operation in the
   :activation_code_created_at key"
+  ; In the improbable case that the generated activation code is not unique,
+  ; it will be detected by valid? or the database unique index on
+  ; :activation_code. The user then will be asked to try it again.
+  ; 
+  ; As a reference, Devise (an auth solution for Rails), works around the
+  ; uniqueness problem with a different strategy: it generates codes in a
+  ; loop until a unique one is obtained. However, because that doesn't seem
+  ; to be combined with an appropriate unique index, I would say it's subject
+  ; to race conditions.
+  ; http://stackoverflow.com/a/6128878/974795
+  ; https://github.com/plataformatec/devise/blob/master/lib/generators/active_record/templates/migration.rb
   ;
   ; It takes ~1.26 ms in my MBP (2.26 GHz Intel Core 2 Duo)
   ; ~1.27 ms in Heroku
