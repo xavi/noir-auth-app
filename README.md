@@ -53,11 +53,13 @@ The email sent when signing up contains a link like this. When following it, the
 
 If the activation code is not found or has expired an appropriate message is displayed. The message about the expired activation code contains a link to ask for a new one (`/resend-activation?email=:email`).
 
-#### `GET /resend-activation?email=:email`
+#### `POST /resend-activation?email=:email`
 
 Looks up the email in the database and if corresponds to a not yet activated account, it resets its activation code and sends it to that email address. Finally, it redirects to `/login`.
 
 If the email is not found or it corresponds to an already activated account, an appropriate message is displayed.
+
+The reason to use POST instead of GET is the same as for `/logout` (see below).
 
 
 ### Login/Logout
@@ -104,9 +106,11 @@ Used from the `/settings` page to request an email change. Appropriate messages 
 A link ( `/email-changes/:email-change-code/verify` ) is sent to the requested new email address for the user to confirm it.
 
 
-#### `GET /email-changes/cancel`
+#### `POST /email-changes/cancel`
 
 It allows to cancel an email change request. This link is available in the `/settings` page while there's an email change waiting to be confirmed.
+
+The reason to use POST instead of GET is the same as for `/logout` (see above).
 
 
 #### `GET /email-changes/resend-confirmation`

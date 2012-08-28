@@ -51,14 +51,14 @@
                                  :username username)]
                  [:p (submit-button "change username")])
         (when new_requested_email 
-              [:p (str "Email sent to " new_requested_email " with a link to"
-                       " confirm the address change.")
+              [:p (i18n/translate :email-change-confirmation-sent
+                                  {:email new_requested_email})
                   [:br]
                   (link-to "/email-changes/resend-confirmation"
-                           "resend confirmation")
+                           (i18n/translate :resend-confirmation))
                   " · "
-                  (link-to "/email-changes/cancel"
-                           "cancel change")])
+                  (link-to {:data-method "post"} "/email-changes/cancel"
+                           (i18n/translate :cancel-change))])
         (common/error-text (:email-form-errors flash-value) user)
         (form-to [:post "/email-changes"]
                  [:p (text-field {:placeholder "Email"} :email email)]
@@ -164,8 +164,10 @@
                                         {:new_requested_email new-email})})))
   (resp/redirect "/settings"))
 
-;
-(defpage "/email-changes/cancel" {}
+; HTTP POST is used instead of GET for the same reason it's used for /logout
+; (see comment for /logout in noir-auth-app.views.users). See also
+; http://news.ycombinator.com/item?id=4439599
+(defpage [:post "/email-changes/cancel"] {}
   (users/cancel-email-change! (session/get :user-id))
   (resp/redirect "/settings"))
 

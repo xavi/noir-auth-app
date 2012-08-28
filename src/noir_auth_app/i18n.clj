@@ -63,6 +63,9 @@
       (fn [_]
           (str
             "Admin — " config/app-name))
+   :cancel-change
+      (fn [_]
+            "cancel change")
    :change-password-page-title
       (fn [_]
           (str
@@ -70,6 +73,9 @@
    :email-change-code-not-found
       (fn [_] 
             "Email change code not found.")
+   :email-change-confirmation-sent
+      #(str "Email sent to " (:email %)
+            " with a link to confirm the address change.")
    :email-change-confirmed
       (fn [_] 
             "Email change confirmed.")
@@ -140,6 +146,9 @@
    :resend-activation-page-title
       (fn [_]
             config/app-name)
+   :resend-confirmation
+      (fn [_]
+            "resend confirmation")
    :settings-page-title
       (fn [_]
           (str
