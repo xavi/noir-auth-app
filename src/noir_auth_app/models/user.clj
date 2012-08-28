@@ -176,26 +176,6 @@
             :users
             {:message :password-reset-code-taken}))
 
-  ; Restful Authentication:
-  ; only letters, numbers, and .-_@
-  ; https://github.com/technoweenie/restful-authentication/blob/master/generators/authenticated/templates/model.rb
-  ; https://github.com/technoweenie/restful-authentication/blob/master/lib/authentication.rb
-  ; Authlogic:
-  ; only letters, numbers, spaces, and .-_@
-  ; https://github.com/binarylogic/authlogic/blob/master/lib/authlogic/regex.rb
-  ; Clearance:
-  ; By default, it only authenticates by email
-  ; http://robots.thoughtbot.com/post/159805955/clearance-rails-authentication-for-developers-who
-  ; Devise:
-  ; By default, it only authenticates by email, but
-  ; https://github.com/plataformatec/devise/wiki/How-To%3a-Allow-users-to-sign-in-using-their-username-or-email-address
-  ;
-  ; https://github.com/ibdknox/noir/blob/master/src/noir/validation.clj
-
-  ; Regular expression used by Restful Authentication to validate usernames
-  ; (see
-  ; https://github.com/technoweenie/restful-authentication/blob/master/lib/authentication.rb ):
-  ; /\A\w[\w\.\-_@]+\z/ 
   ; More about \A and \z anchors in...
   ; http://stackoverflow.com/questions/3632024/why-do-rubys-regular-expressions-use-a-and-z-instead-of-and
   ; http://www.regular-expressions.info/anchors.html
