@@ -113,9 +113,11 @@ It allows to cancel an email change request. This link is available in the `/set
 The reason to use POST instead of GET is the same as for `/logout` (see above).
 
 
-#### `GET /email-changes/resend-confirmation`
+#### `POST /email-changes/resend-confirmation`
 
 It resends the link to confirm the new address of an email change request. This link is available in the `/settings` page while there's an email change waiting to be confirmed.
+
+The reason to use POST instead of GET is the same as for `/logout` (see above).
 
 
 #### `GET /email-changes/:email-change-code/verify`

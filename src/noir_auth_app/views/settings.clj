@@ -54,7 +54,8 @@
               [:p (i18n/translate :email-change-confirmation-sent
                                   {:email new_requested_email})
                   [:br]
-                  (link-to "/email-changes/resend-confirmation"
+                  (link-to {:data-method "post"}
+                           "/email-changes/resend-confirmation"
                            (i18n/translate :resend-confirmation))
                   " · "
                   (link-to {:data-method "post"} "/email-changes/cancel"
@@ -171,8 +172,9 @@
   (users/cancel-email-change! (session/get :user-id))
   (resp/redirect "/settings"))
 
-;
-(defpage "/email-changes/resend-confirmation" {}
+; HTTP POST is used instead of GET for the same reason it's used for /logout
+; (see comment for /logout in noir-auth-app.views.users)
+(defpage [:post "/email-changes/resend-confirmation"] {}
   (email-email-change-code (common/current-user))
   (resp/redirect "/settings"))
 
