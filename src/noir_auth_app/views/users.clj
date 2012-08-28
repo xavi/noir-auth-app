@@ -179,7 +179,11 @@
 ; https://github.com/binarylogic/authlogic/blob/master/lib/authlogic/session/perishable_token.rb
 ; https://github.com/binarylogic/authlogic/blob/master/lib/authlogic/acts_as_authentic/perishable_token.rb
 ;
-(defpage "/resend-activation" {email :email}
+; HTTP POST is used instead of GET for the same reason it's used for /logout
+; (see comment for /logout below). See also
+; http://news.ycombinator.com/item?id=4439599
+;
+(defpage [:post "/resend-activation"] {email :email}
   (if-let [user (users/reset-activation-code! email)]
     (do (email-activation-code user)
         (session/flash-put! "New activation email sent.")

@@ -80,7 +80,7 @@
       (fn [_]
             "Email already taken.")
    :expired-activation-code
-      #(str "Expired activation code. <a href=\""
+      #(str "Expired activation code. <a data-method=\"post\" href="\"
             (url "/resend-activation" {:email (:email %)})
             "\">Get a new activation email with a new code</a>.")
    :expired-password-reset-code
@@ -116,9 +116,9 @@
       #(str "Email already taken but not confirmed yet. <a href=\""
             ; http://weavejester.github.com/hiccup/hiccup.util.html#var-url
             (url "/resend-activation" {:email (:new_requested_email %)})
-            "\">Resend confirmation email</a>.")
+            "\" data-method=\"post\">Resend confirmation email</a>.")
    :not-yet-activated
-      #(str "Account not yet activated. <a href=\""
+      #(str "Account not yet activated. <a data-method=\"post\" href=\""
             (url "/resend-activation" {:email (:email %)})
             "\">Resend activation email</a>.")
    :password-changed
@@ -152,7 +152,7 @@
       #(str "Email already taken but not confirmed yet. <a href=\""
             ; http://weavejester.github.com/hiccup/hiccup.util.html#var-url
             (url "/resend-activation" {:email (:email %)})
-            "\">Resend confirmation email</a>.")
+            "\" data-method=\"post\">Resend confirmation email</a>.")
    :update-error
       (fn [_]
           (str 

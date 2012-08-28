@@ -702,11 +702,11 @@
     ; additional validation code, this is handled like if it were the real,
     ; current email.
     (when (valid? (merge user {:email new-email}))
-        (update! user-id
-                 {:new_requested_email new-email
-                  :email_change_code (hexadecimalize
-                                            (generate-secure-token 20))}
-                 {:skip-validations true}))))
+          (update! user-id
+                   {:new_requested_email new-email
+                    :email_change_code (hexadecimalize
+                                              (generate-secure-token 20))}
+                   {:skip-validations true}))))
 
 ;
 (defn cancel-email-change! [user-id]

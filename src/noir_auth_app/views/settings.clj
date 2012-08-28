@@ -119,16 +119,49 @@
          :body (str (common/base-url)
                     "/email-changes/" email_change_code "/verify")})))
 
+; The message string that corresponds to
+; :taken-by-not-yet-activated-account assumes that the taken email is
+; in the :email key (see the i18n module). This is correct when
+; reporting a signup error, but not an email change error like this.
+; In this case the taken email is in :new_requested_email .
+; The same happens with the :email-taken error. To handle this, these
+; errors are mapped to the keys of corresponding message strings that
+; use the value of :new-requested-email instead of the value of :email.
+;
+; #TODO: maybe these should be considered different errors, and so the
+; remapping be moved to the model (users/change-email!) ?
+; But this would require that Noir provides a way to re-set the errors
+; on a given field, and that doesn't seem to be possible currently, as
+; the set-error function actually adds the error instead of replacing
+; it. (I think the current set-error should probably be renamed to
+; add-error and then provide a real set-error, like Rails' Errors#add
+; and Errors#set methods.)
+; https://github.com/ibdknox/noir/blob/master/src/noir/validation.clj
+; http://api.rubyonrails.org/classes/ActiveModel/Errors.html
+;
+(defn- get-email-change-errors []
+  ; http://clojuredocs.org/clojure_core/clojure.core/replace
+  (replace {:taken-by-not-yet-activated-account
+              :new-requested-email-taken-by-not-yet-activated-account
+            ; actually this was not necessary because no value is
+            ; interpolated into the current message string, but anyway
+            :email-taken
+              :new-requested-email-taken}
+           ; Noir docs say that get-errors returns a vector of error
+           ; strings or nil, but this is only true when it's called
+           ; with a field name, not when called without params.
+           (vali/get-errors)))
+
 ; curl -X POST -i http://127.0.0.1:5000/email-changes -d "email=test@example.com"
 (defpage [:post "/email-changes"] {new-email :email}
   (when (not= new-email (:email (common/current-user)))
       (if-let [updated-user (users/request-email-change!
                                         (session/get :user-id) new-email)]
         (email-email-change-code updated-user)
-        ; Noir docs say that get-errors returns a vector of error
-        ; strings or nil, but this is only true when it's called
-        ; with a field name, not when called without params.
-        (session/flash-put! {:email-form-errors (vali/get-errors)})))
+        (session/flash-put!
+            {:email-form-errors (i18n/translate
+                                        (get-email-change-errors)
+                                        {:new_requested_email new-email})})))
   (resp/redirect "/settings"))
 
 ;
@@ -162,36 +195,8 @@
 ; signing up to Twitter while the reservation holds.
 (defpage "/email-changes/:email-change-code/verify" {:keys [email-change-code]}
   (if (users/change-email! (session/get :user-id) email-change-code)
-      (session/flash-put! {:email-form-errors
-                                        [:email-change-confirmed]})
-      ; The message string that corresponds to
-      ; :taken-by-not-yet-activated-account assumes that the taken email is
-      ; in the :email key (see the i18n module). This is correct when
-      ; reporting a signup error, but not an email change error like this.
-      ; In this case the taken email is in :new_requested_email .
-      ; The same happens with the :email-taken error. To handle this, these
-      ; errors are mapped to the keys of corresponding message strings that
-      ; use the value of :new-requested-email instead of the value of :email.
-      ;
-      ; #TODO: maybe these should be considered different errors, and so the
-      ; remapping be moved to the model (users/change-email!) ?
-      ; But this would require that Noir provides a way to re-set the errors
-      ; on a given field, and that doesn't seem to be possible currently, as
-      ; the set-error function actually adds the error instead of replacing
-      ; it. (I think the current set-error should probably be renamed to
-      ; add-error and then provide a real set-error, like Rails' Errors#add
-      ; and Errors#set methods.)
-      ; https://github.com/ibdknox/noir/blob/master/src/noir/validation.clj
-      ; http://api.rubyonrails.org/classes/ActiveModel/Errors.html
-      ;
-      (let [m {:taken-by-not-yet-activated-account
-                  :new-requested-email-taken-by-not-yet-activated-account
-               ; actually this was not necessary because no value is
-               ; interpolated into the current message string, but anyway
-               :email-taken  
-                  :new-requested-email-taken}
-            errors (map #(or (% m) %) (vali/get-errors))]
-          (session/flash-put! {:email-form-errors errors})))
+      (session/flash-put! {:email-form-errors [:email-change-confirmed]})
+      (session/flash-put! {:email-form-errors (get-email-change-errors)}))
   (resp/redirect "/settings"))
 
 ; #TODO: depending on the session length, the old password should probably be
