@@ -1,5 +1,6 @@
 (ns noir-auth-app.i18n
   (use hiccup.page-helpers)
+  (use noir-auth-app.utilities)
 
   (:require [noir-auth-app.config :as config]))
 
@@ -27,11 +28,11 @@
 ;   (time ((:greeting translations) {:username "xavi"}))
 ; 0.0768 ms vs 0.137 ms (average on 5 runs, excluding the 1st one to
 ; ignore compile time)
-; So, with str this is ~1.78 times faster than with format.
+; So, str only takes ~56% of the time taken by format.
 (def translations
   {:account-activation-failed-page-title
       (fn [_]
-          (str
+          (str*
             "Account activation failed — " config/app-name))
    :activation-code-not-found
       ; if using the anonymous function literal, and the function
@@ -46,7 +47,12 @@
       ; are not used
       ; http://java.ociweb.com/mark/clojure/article.html#Syntax
       (fn [_]
-          (str 
+          ; str vs str*
+          ; 0.0802 ms vs 0.0572 ms (average on 5 runs, excluding the 1st one
+          ; to ignore compile time), so str* only takes ~71% of the time
+          ; taken by str. Moreover, the difference increases with the number
+          ; of concatenated strings.
+          (str*
             "Activation code not found. Please make sure that the link that "
             "you opened in your browser is the same as the one you received "
             "by email. If problems continue, please contact us at "
@@ -56,19 +62,19 @@
             "Email sent with your activation code. Thanks for signing up!")
    :activation-code-taken
       (fn [_] 
-          (str
+          (str*
             "Generated activation code is already taken. "
             "Please try it again."))
    :admin-page-title
       (fn [_]
-          (str
+          (str*
             "Admin — " config/app-name))
    :cancel-change
       (fn [_]
             "cancel change")
    :change-password-page-title
       (fn [_]
-          (str
+          (str*
             "Change password — " config/app-name))
    :email-change-code-not-found
       (fn [_] 
@@ -94,14 +100,14 @@
             "Expired reset code. You can request a new one below.")
    :forgot-password-page-title
       (fn [_]
-          (str 
+          (str*
             "Forgot password — " config/app-name))
    :home-page-title
       (fn [_]
             config/app-name)
    :insert-error
       (fn [_]
-          (str 
+          (str*
             "There was an error, please try again. If problems continue, "
             "contact us at " contact-link " ."))
    :invalid-email
@@ -109,12 +115,13 @@
             "Email not valid.")
    :invalid-username
       (fn [_]
-          (str
+          (str*
             "Username can contain only letters (no accents), numbers, "
             "dots (.), hyphens (-) and underscores (_)."))
    :login-page-title
       (fn [_]
-          (str "Login — " config/app-name))
+          (str*
+            "Login — " config/app-name))
    :new-requested-email-taken
       (fn [_]
             "Email already taken.")
@@ -132,12 +139,12 @@
             "Your password has been changed.")
    :password-reset-code-not-found
       (fn [_]
-          (str
+          (str*
             "Reset code not found. You can try asking for a new one below. "
             "If problems continue, please contact us at " contact-link " ."))
    :password-reset-code-taken
       (fn [_]
-          (str
+          (str*
             "Generated password reset code is already taken. "
             "Please try it again."))
    :password-too-short
@@ -151,11 +158,11 @@
             "resend confirmation")
    :settings-page-title
       (fn [_]
-          (str
+          (str*
             "Settings — " config/app-name))
    :signup-page-title
       (fn [_]
-          (str
+          (str*
             "Signup — " config/app-name))
    :taken-by-not-yet-activated-account
       #(str "Email already taken but not confirmed yet. <a href=\""
@@ -164,7 +171,7 @@
             "\" data-method=\"post\">Resend confirmation email</a>.")
    :update-error
       (fn [_]
-          (str 
+          (str*
             "There was an error, please try again. If problems continue, "
             "contact us at " contact-link " ."))
    :username-taken
