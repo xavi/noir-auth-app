@@ -92,7 +92,7 @@
       (fn [_]
             "Email already taken.")
    :expired-activation-code
-      #(str "Expired activation code. <a data-method=\"post\" href="\"
+      #(str "Expired activation code. <a data-method=\"post\" href=\""
             (url "/resend-activation" {:email (:email %)})
             "\">Get a new activation email with a new code</a>.")
    :expired-password-reset-code
