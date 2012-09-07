@@ -17,9 +17,13 @@
             [somnium.congomongo :as db]
             [clj-time.core :as time]
             [noir.util.crypt :as crypt]
-            [noir.validation :as vali])
+            [noir.validation :as vali]
+            [monger.collection :as mc])
 
-  (:import java.security.SecureRandom))
+  (:use monger.operators)
+
+  (:import java.security.SecureRandom)
+  (:import [org.bson.types ObjectId]))
             
 
 ; Although the convention in Clojure is to use hyphens to separate words in
@@ -57,8 +61,8 @@
   "If it doesn't exist yet, it creates a collection named 'users'.
   If they don't exist yet, it creates the appropriate indexes."
   []
-  (or (db/collection-exists? :users) 
-      (db/create-collection! :users))
+  (or (mc/exists? "users") 
+      (mc/create "users"))
 
   ; MongoDB creates the _id index by default on all collections. It is a
   ; unique index even though the getIndexes() method will not print unique:
@@ -66,20 +70,22 @@
   ; http://docs.mongodb.org/manual/core/indexes/#index-type-primary
 
   ; http://docs.mongodb.org/manual/core/indexes/#unique-index
-  ; https://github.com/aboekhoff/congomongo/issues/82
-  (db/add-index! :users [:lowercase_username] :unique true)
-  (db/add-index! :users [:email] :unique true)
-  (db/add-index! :users [:created_at])
+                                        ; https://github.com/aboekhoff/congomongo/issues/82
+  (mc/ensure-idex "users" {"lowercase_username" 1
+                           "email" 1}
+                  {:unique true})
+  (mc/ensure-idex "users" {"created_at" 1})
 
   ; http://docs.mongodb.org/manual/core/indexes/#sparse-index
-  ; http://stackoverflow.com/questions/8608567/sparse-indexes-and-null-values-in-mongo
-  (db/add-index! :users [:activation_code] :unique true :sparse true)
-  (db/add-index! :users [:password_reset_code] :unique true :sparse true))
+                                        ; http://stackoverflow.com/questions/8608567/sparse-indexes-and-null-values-in-mongo
+  (mc/ensure-idex "users" {"activaction_code" 1
+                           "password_reset_code" 1}
+                  {:unique true :sparse true}))
 
 
 ;; Querying the database
 
-(defn find [& [{:keys [where sort limit]}]]
+(defn find [query]
   ; Congomongo's fetch uses keyword parameters, so the way to call fetch is...
   ;     (fetch :users :limit limit)
   ; instead of...
@@ -87,23 +93,22 @@
   ;   https://github.com/aboekhoff/congomongo/blob/master/src/somnium/congomongo.clj#L264
   ; More about keyword params in Clojure at
   ;   http://stackoverflow.com/questions/717963/clojure-keyword-arguments
-  (db/fetch :users :where where :sort sort :limit limit))
+  (mc/find-maps "users" query)
+
+; sort and limit TODO 
+  (mc/find-maps "users" {where}))
 
 (defn find-by-id [id]  
-  (db/fetch-one :users
-                :where {:_id id}))
+  (mc/find-map-by-id "users" id))
 
 (defn find-by-email [email]
-  (db/fetch-one :users
-                :where {:email (string/lower-case email)}))
+  (mc/find-one-as-map "users" {:email (string/lower-case email)}))
 
 (defn find-by-activation-code [activation-code]
-  (db/fetch-one :users
-                :where {:activation_code activation-code}))
+  (mc/find-one-as-map "users" {:activation_code activation-code}))
 
 (defn find-by-password-reset-code [password-reset-code]
-  (db/fetch-one :users
-                :where {:password_reset_code password-reset-code}))
+  (mc/find-one-as-map "users" {:password_reset_code password-reset-code}))
 
 (defn find-by-username-or-email [username-or-email]
   ; MongoDB indexes (and string equality tests in general) are case sensitive.
@@ -126,9 +131,9 @@
   ; http://www.mongodb.org/display/DOCS/Advanced+Queries#AdvancedQueries-%24or
   (let [lc-username-or-email 
             (when username-or-email (string/lower-case username-or-email))]
-      (db/fetch-one :users
-                    :where {:$or [{:lowercase_username lc-username-or-email}
-                                  {:email lc-username-or-email}]})))
+    (mc/find-one-as-map "users"
+                        { $or [{:lowercase_username lc-username-or-email}
+                               {:email lc-username-or-email}]})))
 
 ; This function may be useful for any collection, not only for :users, that's
 ; why there's a collection-name parameter. The function should be eventually
@@ -141,10 +146,9 @@
         ; attr-name must be a keyword
         ; http://stackoverflow.com/questions/1527548/why-does-clojure-have-keywords-in-addition-to-symbols
         attr-value (attr-name record)]
-    (vali/rule (not (db/fetch-one
-                          collection-name 
-                          :where (merge {attr-name attr-value}
-                                        (when _id {:_id {:$ne _id}}))))
+    (vali/rule (not (mc/any?
+                     collection-name (merge {attr-name attr-value}
+                                            (when _id {:_id { $ne _id}}))))
                [attr-name message])))
 
 
@@ -158,7 +162,7 @@
         (validate-uniqueness
             user
             :activation_code
-            :users
+            "users"
             {:message :activation-code-taken}))
 
   ; Database performance, as measured by timing the call to
@@ -173,7 +177,7 @@
         (validate-uniqueness
             user
             :password_reset_code 
-            :users
+            "users"
             {:message :password-reset-code-taken}))
 
   ; More about \A and \z anchors in...
@@ -207,7 +211,7 @@
       ; http://stackoverflow.com/questions/8992997/initializing-elements-of-a-map-conditionally-in-clojure
       (let [where (merge {:lowercase_username (string/lower-case username)}
                          (when _id {:_id {:$ne _id}}))]
-          (vali/rule (not (db/fetch-one :users :where where))
+          (vali/rule (not (mc/any? "users" where))
                      [:username :username-taken])))
   
   ; A nil email must be explicitly checked because noir.validation.is-email?
@@ -219,10 +223,10 @@
   (let [lc-email (when email (string/lower-case email))]
       (if (or (nil? lc-email) (not (vali/is-email? lc-email)))
           (vali/set-error :email :invalid-email)
-          (let [user (db/fetch-one 
-                          :users 
-                          :where (merge {:email lc-email}
-                                        (when _id {:_id {:$ne _id}})))]
+          (let [user (mc/find-one-as-map 
+                      "users"
+                      (merge {:email lc-email}
+                             (when _id {:_id { $ne _id}})))]
               (when user
                   (if (:activation_code user)
                       (vali/set-error 
@@ -348,8 +352,9 @@
               ; Same for :updated_at .
               (let [now (time/now)]
                 ; insert! returns the inserted object, with the :_id set
-                (db/insert! :users 
-                            (merge (prepare-for-save user)
+                (mc/insert "users" 
+                           (merge (prepare-for-save user)
+                                  {:_id (ObjectId.)}
                                    (when-not (contains? user :created_at)
                                              {:created_at now})
                                    (when-not (contains? user :updated_at)
@@ -468,11 +473,10 @@
                     ; This updated object will completely replace the old
                     ; object. To modify only some fields, the $ modifiers have
                     ; to be used.
-                    (db/update! :users 
-                                old-user
-                                {:$set (assoc prepared-user
+                    (mc/update-by-id "users" user-id
+                                {$set (assoc prepared-user
                                               :updated_at updated-at)
-                                 :$unset unset-map})
+                                 $unset unset-map})
                     (find-by-id user-id)
                     (catch Exception e
                       (println e)
@@ -509,11 +513,11 @@
   ; CongoMongo provides a fetch-and-modify function that wraps MongoDB's
   ; findAndModify command, but I don't see the value of it, and I prefer to
   ; use the generic command function.
-  (let [user-id (db/object-id (str user-id))
-        command-result (db/command {:findAndModify "users" 
-                                    :query {:_id user-id}
-                                    :remove true})]
-    (or (get-in command-result [:lastErrorObject :n]) 0)))
+  (let [user-id (ObjectId (str user-id))]
+    (mc/remove-by-id "users" user-id)))
+;; I DON'T LIKE THET OLD ONE... ObjectId I need to be sure that the ID
+;; really exist, if it does what else could go wrong ? I need to
+;; assume tha mongo will do its job.
 
 
 (defn activate!
@@ -725,9 +729,9 @@
 ; enforced by the client code of this function.)
 (defn change-email! [user-id email-change-code]
   (if-let [{new-email :new_requested_email} 
-                (db/fetch-one :users
-                              :where {:_id user-id 
-                                      :email_change_code email-change-code})]
+           (mc/find-one-as-map "users"
+                               {:_id user-id
+                                :email_change_code email-change-code})]
     (update! user-id
              {:new_requested_email nil
               :email_change_code nil 
