@@ -7,7 +7,6 @@
             [noir.session :as session]
             [clj-time.format :as time-format]
             [noir-auth-app.models.user :as users]
-            [somnium.congomongo :as db]
             [noir-auth-app.views.common :as common]))
 
 
