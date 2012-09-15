@@ -20,169 +20,134 @@
 (def contact-link (str "<a href=\"mailto:" config/contact-email "\">"
                        config/contact-email "</a>"))
 
-; Instead of
-;   (def translations {:greeting #(str "hello " (:username %) "!")})
-; another option would be to use format
-;   (def translations {:greeting #(format "hello %s!" (:username %))})
-; but that's much slower, as measured by
-;   (time ((:greeting translations) {:username "xavi"}))
-; 0.0768 ms vs 0.137 ms (average on 5 runs, excluding the 1st one to
-; ignore compile time)
-; So, str only takes ~56% of the time taken by format.
 (def translations
   {:account-activation-failed-page-title
-      (fn [_]
-          (str*
-            "Account activation failed — " config/app-name))
+      (renderer-fn
+          "Account activation failed — " config/app-name)
    :activation-code-not-found
-      ; if using the anonymous function literal, and the function
-      ; implementation doesn't reference any parameter like in this case,
-      ; then the function doesn't expect any parameters, and calling it with
-      ; one parameter would result in
-      ; Wrong number of args (1) passed to: i18n$fn
-      ; http://stackoverflow.com/q/7841643/974795
-      ; To work around this, the fn macro is used...
-      ;   http://clojuredocs.org/clojure_core/clojure.core/fn
-      ; The underscore (_) is a Clojure naming convention for parameters that
-      ; are not used
-      ; http://java.ociweb.com/mark/clojure/article.html#Syntax
-      (fn [_]
-          ; str vs str*
-          ; 0.0802 ms vs 0.0572 ms (average on 5 runs, excluding the 1st one
-          ; to ignore compile time), so str* only takes ~71% of the time
-          ; taken by str. Moreover, the difference increases with the number
-          ; of concatenated strings.
-          (str*
-            "Activation code not found. Please make sure that the link that "
-            "you opened in your browser is the same as the one you received "
-            "by email. If problems continue, please contact us at "
-            contact-link " ."))
+      (renderer-fn
+          "Activation code not found. Please make sure that the link that "
+          "you opened in your browser is the same as the one you received "
+          "by email. If problems continue, please contact us at "
+          contact-link " .")
    :activation-code-sent
-      (fn [_]
-            "Email sent with your activation code. Thanks for signing up!")
+      (renderer-fn
+          "Email sent with your activation code. Thanks for signing up!")
    :activation-code-taken
-      (fn [_] 
-          (str*
-            "Generated activation code is already taken. "
-            "Please try it again."))
+      (renderer-fn
+          "Generated activation code is already taken. Please try it again.")
    :admin-page-title
-      (fn [_]
-          (str*
-            "Admin — " config/app-name))
+      (renderer-fn
+          "Admin — " config/app-name)
    :cancel-change
-      (fn [_]
-            "cancel change")
+      (renderer-fn
+          "cancel change")
    :change-password-page-title
-      (fn [_]
-          (str*
-            "Change password — " config/app-name))
+      (renderer-fn
+          "Change password — " config/app-name)
    :email-change-code-not-found
-      (fn [_] 
-            "Email change code not found.")
+      (renderer-fn
+          "Email change code not found.")
    :email-change-confirmation-sent
-      #(str "Email sent to " (:email %)
-            " with a link to confirm the address change.")
+      (renderer-fn
+          "Email sent to " (:email %)
+          " with a link to confirm the address change.")
    :email-change-confirmed
-      (fn [_] 
-            "Email change confirmed.")
+      (renderer-fn
+          "Email change confirmed.")
    :email-not-found
-      (fn [_] 
-            "Email not found")
+      (renderer-fn
+          "Email not found")
    :email-taken
-      (fn [_]
-            "Email already taken.")
+      (renderer-fn
+          "Email already taken.")
    :expired-activation-code
-      #(str "Expired activation code. <a data-method=\"post\" href=\""
-            (url "/resend-activation" {:email (:email %)})
-            "\">Get a new activation email with a new code</a>.")
+      (renderer-fn
+          "Expired activation code. <a data-method=\"post\" href=\""
+          (url "/resend-activation" {:email (:email %)})
+          "\">Get a new activation email with a new code</a>.")
    :expired-password-reset-code
-      (fn [_]
-            "Expired reset code. You can request a new one below.")
+      (renderer-fn
+          "Expired reset code. You can request a new one below.")
    :forgot-password-page-title
-      (fn [_]
-          (str*
-            "Forgot password — " config/app-name))
+      (renderer-fn
+          "Forgot password — " config/app-name)
    :home-page-title
-      (fn [_]
-            config/app-name)
+      (renderer-fn
+          config/app-name)
    :insert-error
-      (fn [_]
-          (str*
-            "There was an error, please try again. If problems continue, "
-            "contact us at " contact-link " ."))
+      (renderer-fn
+          "There was an error, please try again. If problems continue, "
+          "contact us at " contact-link " .")
    :invalid-email
-      (fn [_] 
-            "Email not valid.")
+      (renderer-fn
+          "Email not valid.")
    :invalid-username
-      (fn [_]
-          (str*
-            "Username can contain only letters (no accents), numbers, "
-            "dots (.), hyphens (-) and underscores (_)."))
+      (renderer-fn
+          "Username can contain only letters (no accents), numbers, "
+          "dots (.), hyphens (-) and underscores (_).")
    :login-page-title
-      (fn [_]
-          (str*
-            "Login — " config/app-name))
+      (renderer-fn
+          "Login — " config/app-name)
    :new-requested-email-taken
-      (fn [_]
-            "Email already taken.")
+      (renderer-fn
+          "Email already taken.")
    :new-requested-email-taken-by-not-yet-activated-account
-      #(str "Email already taken but not confirmed yet. <a href=\""
-            ; http://weavejester.github.com/hiccup/hiccup.util.html#var-url
-            (url "/resend-activation" {:email (:new_requested_email %)})
-            "\" data-method=\"post\">Resend confirmation email</a>.")
+      (renderer-fn
+          "Email already taken but not confirmed yet. <a href=\""
+          ; http://weavejester.github.com/hiccup/hiccup.util.html#var-url
+          (url "/resend-activation" {:email (:new_requested_email %)})
+          "\" data-method=\"post\">Resend confirmation email</a>.")
    :not-yet-activated
-      #(str "Account not yet activated. <a data-method=\"post\" href=\""
-            (url "/resend-activation" {:email (:email %)})
-            "\">Resend activation email</a>.")
+      (renderer-fn
+          "Account not yet activated. <a data-method=\"post\" href=\""
+          (url "/resend-activation" {:email (:email %)})
+          "\">Resend activation email</a>.")
    :password-changed
-      (fn [_]
-            "Your password has been changed.")
+      (renderer-fn
+          "Your password has been changed.")
    :password-reset-code-not-found
-      (fn [_]
-          (str*
-            "Reset code not found. You can try asking for a new one below. "
-            "If problems continue, please contact us at " contact-link " ."))
+      (renderer-fn
+          "Reset code not found. You can try asking for a new one below. "
+          "If problems continue, please contact us at " contact-link " .")
    :password-reset-code-taken
-      (fn [_]
-          (str*
-            "Generated password reset code is already taken. "
-            "Please try it again."))
+      (renderer-fn
+          "Generated password reset code is already taken. "
+          "Please try it again.")
    :password-too-short
-      (fn [_]
-            "Password must be at least 5 characters.")
+      (renderer-fn
+          "Password must be at least 5 characters.")
    :resend-activation-page-title
-      (fn [_]
-            config/app-name)
+      (renderer-fn
+          config/app-name)
    :resend-confirmation
-      (fn [_]
-            "resend confirmation")
+      (renderer-fn
+          "resend confirmation")
    :settings-page-title
-      (fn [_]
-          (str*
-            "Settings — " config/app-name))
+      (renderer-fn
+          "Settings — " config/app-name)
    :signup-page-title
-      (fn [_]
-          (str*
-            "Signup — " config/app-name))
+      (renderer-fn
+          "Signup — " config/app-name)
    :taken-by-not-yet-activated-account
-      #(str "Email already taken but not confirmed yet. <a href=\""
-            ; http://weavejester.github.com/hiccup/hiccup.util.html#var-url
-            (url "/resend-activation" {:email (:email %)})
-            "\" data-method=\"post\">Resend confirmation email</a>.")
+      (renderer-fn
+          "Email already taken but not confirmed yet. <a href=\""
+          ; http://weavejester.github.com/hiccup/hiccup.util.html#var-url
+          (url "/resend-activation" {:email (:email %)})
+          "\" data-method=\"post\">Resend confirmation email</a>.")
    :update-error
-      (fn [_]
-          (str*
-            "There was an error, please try again. If problems continue, "
-            "contact us at " contact-link " ."))
+      (renderer-fn
+          "There was an error, please try again. If problems continue, "
+          "contact us at " contact-link " .")
    :username-taken
-      (fn [_]
-            "That username is already taken.")
+      (renderer-fn
+          "That username is already taken.")
    :username-too-long
-      (fn [_]
-            "Username must be less than 30 characters.")      
+      (renderer-fn
+          "Username must be less than 30 characters.")
    :username-too-short
-      (fn [_]
-            "Username must be at least 2 characters.")})
+      (renderer-fn
+          "Username must be at least 2 characters.")})
 
 
 ; http://www.ibm.com/developerworks/java/library/j-clojure-protocols/
