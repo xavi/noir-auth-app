@@ -1,6 +1,6 @@
 # noir-auth-app
 
-A complete authentication web app based on Clojure/ClojureScript, Noir and MongoDB.
+A complete authentication web app based on Clojure/ClojureScript, Noir, Enlive and MongoDB.
 
 It's meant to be used as a base app for building Clojure web apps that require authentication.
 
