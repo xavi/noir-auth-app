@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="initial-scale=1.0, width=device-width" name="viewport">
+    <link href="css/reset.css" rel="stylesheet" type="text/css">
+    <link href="css/default.css" rel="stylesheet" type="text/css">
+  </head>
+  <body>
+    <div id="page">
+      <div class="nav">
+
+        <ul id="not-logged-in-nav">
+          <li><a href="/login">log in</a></li>
+        </ul>
+
+      </div>
+      <div style="clear: both"></div>
+      <div class="nav">
+
+        <ul id="logged-in-nav">
+          <li><a href="/admin">admin</a></li><!--
+          http://stackoverflow.com/q/12168194/974795
+          --><li><a href="/settings">settings</a></li><!--
+          --><li><a data-method="post" href="/logout">log out</a></li>
+        </ul>
+
+      </div>
+    </div>
+  </body>
+</html>

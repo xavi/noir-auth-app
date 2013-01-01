@@ -41,6 +41,7 @@
                            [com.draines/postal "1.8.0"]
                            [clj-time "0.4.2"]
                            [jayq "0.1.0-alpha4"]
-                           [fetch "0.1.0-alpha2"]]
+                           [fetch "0.1.0-alpha2"]
+                           [enlive/enlive "1.0.1"]]
             :main noir-auth-app.server)
 

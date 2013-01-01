@@ -1,10 +1,9 @@
 (ns noir-auth-app.views.users
   (use noir.core)
   (use noir.fetch.remotes)
-  (use hiccup.form-helpers)
-  (use hiccup.page-helpers)
   
-  (:require [noir.session :as session]
+  (:require [net.cgrand.enlive-html :as h]
+            [noir.session :as session]
             [noir.validation :as vali]
             [noir.response :as resp]
             [noir-auth-app.models.user :as users]
@@ -12,66 +11,6 @@
             [noir-auth-app.views.common :as common]
             [noir-auth-app.i18n :as i18n]
             [noir-auth-app.config :as config]))
-
-
-;; Partials
- 
-(defpartial user-fields [{:keys [username email] :as usr}]
-            ; If the given field (ex. :username) has an error, on-error will
-            ; execute the specified function, which will be passed the errors
-            ; vector for that field (although this is not explicitly stated
-            ; in the docs, 
-            ;   http://webnoir.org/autodoc/1.2.1/noir.validation-api.html#noir.validation/on-error
-            ; ), and return its value.
-
-            ; :base is not an actual field, just a field name used by
-            ; convention (borrowed from Rails) in this application to
-            ; associate it the errors that are not specific of any attribute.
-            (vali/on-error :base #(common/error-text % {:email email}))
-            (vali/on-error :username common/error-text)
-
-            ; :email errors may be keywords (instead of strings) that have to
-            ; be translated into strings. Using keywords allows to decouple
-            ; the model (which sets the errors) from this view, and it's a
-            ; first step towards internationalization.
-            ; See also noir-auth-app.models.user/valid?, where errors are set.
-            ;(translate-any-errors :activation_code)
-            (vali/on-error :email #(common/error-text % {:email email}))
-            (vali/on-error :activation_code
-                           #(common/error-text % {:email email}))
-            (vali/on-error :password common/error-text)
-
-            [:p (text-field {:placeholder "Username"} :username username)]
-            [:p (text-field {:placeholder "Email"} :email email)]
-            [:p (password-field {:placeholder "Password"} :password)])
-
-
-(defpartial login-fields [{:keys [username-or-email]}]
-            (vali/on-error :password common/error-text)
-            ; Instead of the 'when' below, this would have been shorter...
-            ;   (vali/on-error :activation_code common/error-text)
-            ; but then the model (ns noir-auth-app.models.user) would have to be
-            ; concerned with the URL to resend the activation code which is
-            ; something that only the view layer (this noir-auth-app.views.users)
-            ; should be concerned about.
-            ; That's why I think this 'when' is simpler, less entangled.
-            (when (vali/errors? :activation_code)
-                  (common/error-text 
-                      (i18n/translate (vali/get-errors :activation_code)
-                                      (users/find-by-username-or-email
-                                                        username-or-email))))
-            ; In Twitter and Duolingo it's possible to log in with
-            ; "Username or email".
-            ; By making it possible to log in by username or email, then not
-            ; remembering your username should not be a problem.
-            ;
-            ; I would have liked to autofocus on the first field (using the
-            ; autofocus attribute) but unfortunately it doesn't have the
-            ; expected behaviour in Firefox, as it hides the placeholder. (In
-            ; Chrome, instead, placeholder is hidden on type, not on focus.)
-            [:p (text-field {:placeholder "Username or email"} 
-                            :username-or-email username-or-email)]
-            [:p (password-field {:placeholder "Password"} :password)])
 
 
 (defn- email-activation-code [{:keys [email username activation_code]}]
@@ -84,6 +23,15 @@
                           " account just follow the link below:\n\n"
                           (str (common/base-url) "/activate/" activation_code)
                           "\n\nCheers!")})))
+
+
+(h/defsnippet signup-content "public/signup.html" [:.content :> h/any-node]
+  [user errors]
+  ; https://github.com/noir-clojure/lib-noir/blob/master/src/noir/validation.clj
+  ; http://guides.rubyonrails.org/active_record_validations_callbacks.html#customizing-error-messages-css
+  [:.error-message] (h/clone-for [e errors]
+                        (h/html-content (common/build-error-message e user)))
+  [[:input (h/attr= :type "text")]] (common/set-field-value-from-model user))
 
 ; Besides the typical case of signing up when not logged in, it's also
 ; possible to sign up for an account while logged in with another account.
@@ -103,11 +51,11 @@
 ;   http://webnoir.org/tutorials/routes
 ;
 (defpage "/signup" {:as user}
-  (common/layout (i18n/translate :signup-page-title)
-    ; http://weavejester.github.com/hiccup/hiccup.form.html#var-form-to
-    (form-to [:post "/signup"]
-             (user-fields user)
-             (submit-button "Sign up"))))
+  (common/layout {:title (i18n/translate :signup-page-title)
+                  :nav (common/navigation-menu)
+                  ; (vali/get-errors) returns something like...
+                  ; (:password-too-short :invalid-email :invalid-username :username-too-short)
+                  :content (signup-content user (vali/get-errors))}))
 
 (defpage [:post "/signup"] {:as new-user}
   (if-let [saved-user (users/create! new-user)]
@@ -117,10 +65,40 @@
     ; http://webnoir.org/autodoc/1.2.1/noir.core-api.html#noir.core/render
     (render "/signup" new-user)))
 
+
 (defn save-user-info-in-session [{:keys [_id lowercase_username]}]
   (when true ;(= lowercase_username "admin") 
         (session/put! :admin true))
   (session/put! :user-id _id))
+
+; Notice that the rest param (the param after the &) is destructured
+; ([interpolation-map] instead of simply interpolation-map). That's to get a
+; map instead of a sequence containing a map, as Clojure sets the rest param
+; with a sequence containing the "arguments that exceed the positional params"
+; http://clojure.org/special_forms#Special Forms--(fn name? [params* ] exprs*)
+(defn errors-content
+  [errors & [interpolation-map]]
+  ; The usual way to implement this would be to use defsnippet to load the
+  ; HTML from a file, but the required HTML is so simple that I didn't want
+  ; to create a new file just for it (although if more like this are needed
+  ; they could be put together in a snippets.html file for example). So,
+  ; sniptest is used in order to be able to specify the HTML inline. The
+  ; problem is that sniptest returns a string, and when this string is
+  ; inserted by deftemplate into the final HTML using Enlive's transformation
+  ; function content, it's escaped. That's why the result of sniptest is
+  ; post-processed by by html-snippet.
+  ; https://github.com/cgrand/enlive/blob/master/src/net/cgrand/enlive_html.clj
+  ; The html-snippet function concatenates the passed strings and returns a
+  ; sequence of maps representing HTML elements (the same type of data
+  ; returned by defsnippet). This will be appropriately handled by deftemplate
+  ; (it will not be escaped).
+  (h/html-snippet
+      (h/sniptest "<p class=\"error-message\">Sample error message.</p>"
+        [:.error-message]
+            (h/clone-for [e errors]
+                  (h/html-content 
+                        (common/build-error-message e interpolation-map))))))
+
 
 ; Should the activation/password resets tokens expire? YES
 ; http://stackoverflow.com/questions/4515469/why-should-we-make-account-activation-password-reset-links-expire-after-some-tim
@@ -160,9 +138,10 @@
     ; part of the error message displayed to the user. This email is obtained
     ; as part of the user map for the specified activation code.
     (let [user (users/find-by-activation-code activation-code)]
-        (common/layout (i18n/translate :account-activation-failed-page-title)
-                       (common/error-text 
-                            (i18n/translate (vali/get-errors) user))))))
+        (common/layout {:title (i18n/translate :account-activation-failed-page-title)
+                        :nav (common/navigation-menu)
+                        :content (errors-content (vali/get-errors) user)}))))
+
 
 ; See Matt Hooks' Authlogic Activation Tutorial
 ; https://github.com/matthooks/authlogic-activation-tutorial
@@ -186,42 +165,39 @@
 (defpage [:post "/resend-activation"] {email :email}
   (if-let [user (users/reset-activation-code! email)]
     (do (email-activation-code user)
-        (session/flash-put! "New activation email sent.")
+        (session/flash-put! (i18n/translate :new-activation-email-sent))
         (resp/redirect "/login"))
-    (common/layout (i18n/translate :resend-activation-page-title)
-        (common/error-text (vali/get-errors)))))
+    (common/layout {:title (i18n/translate :resend-activation-page-title)
+                    :nav (common/navigation-menu)
+                    :content (errors-content (vali/get-errors))})))
+
+
+; [:.content :> h/any-node]
+; all children (including text nodes and comments) of the .content element
+; https://github.com/cgrand/enlive
+(h/defsnippet login-content "public/login.html" [:.content :> h/any-node]
+  [user errors]
+  ; https://github.com/noir-clojure/lib-noir/blob/master/src/noir/validation.clj
+  ; http://guides.rubyonrails.org/active_record_validations_callbacks.html#customizing-error-messages-css
+  [:.error-message] (h/clone-for [e errors]
+                        (h/html-content (common/build-error-message e user)))
+  ; https://groups.google.com/group/enlive-clj/browse_thread/thread/2725d46c018beb7
+  ; Remember that set-attr returns a function (as any other Enlive
+  ; transformation function) that expects an element (the matching element).
+  ; (see p. 550 of "Clojure Programming")
+  ; About the nested vectors, see p. 549 of "Clojure Programming".
+  ; See also "Selectors 101" in
+  ; https://github.com/cgrand/enlive
+  [[:input (h/attr= :type "text")]] (common/set-field-value-from-model user))
 
 
 ; https://github.com/ibdknox/Noir-blog/blob/master/src/noir_blog/views/admin.clj
 (defpage "/login" {:as user}
   (if (session/get :user-id)
       (resp/redirect "/")
-      ;
-      ; Notice that here 5 parameters are passed to common/layout. Because of
-      ; the & introducing the 'content' argument in the common/layout definition,
-      ; Clojure will bind 'content' to a _sequence_ of the last four parameters.
-      ;
-      (common/layout (i18n/translate :login-page-title)
-        ; named "notice" like the same type of flash messages in Rails
-        ; http://guides.rubyonrails.org/action_controller_overview.html#the-flash
-        ; http://webnoir.org/tutorials/sessions
-        (when-let [notice (session/flash-get)] [:p.notice notice])
-        (form-to [:post "/login"]
-                 (login-fields user)
-                 [:p (link-to "/password-resets" "forgot password?")]
-                 ; Here's a button that's nested in a paragraph, both have
-                 ; vertical margins (see CSS) but there's no margin collapsing
-                 ; because the button is an inline-block element (see CSS
-                 ; display property in Chrome for example) and margin collapsing
-                 ; only happens with block elements
-                 ; http://pinboard.in/u:xavi/b:dfef44c4248b
-                 [:p (submit-button "Log in")])
-        [:hr]
-        ; Here there is margin collapsing between the paragraph and the
-        ; nested button, i.e. the margin for <p> and the margin for <a> do not
-        ; add up. Because of this, the desired total margin must be specified
-        ; in one of the elements, in this case the button (see CSS).
-        [:p (link-to {:class "button signup"} "/signup" "Sign up...")])))
+      (common/layout {:title (i18n/translate :login-page-title)
+                      :nav nil
+                      :content (login-content user (vali/get-errors))})))
 
 
 (defpage [:post "/login"] {:as credentials}
@@ -230,6 +206,7 @@
         (save-user-info-in-session user)
         (common/redirect-back-or-default "/"))
       (render "/login" credentials)))
+
 
 ; The reason why logouts are handled through HTTP POST instead of GET is to
 ; avoid that someone could log out a user by having him load a page containing

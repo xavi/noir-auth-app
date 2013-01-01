@@ -56,6 +56,26 @@
 ; Handles links that require user confirmation and trigger calls to remote
 ; functions on the server (AJAX).
 ;
+; data-confirm inspired by how Rails 3 handles JavaScript confirmation
+; messages
+;   http://railscasts.com/episodes/205-unobtrusive-javascript?view=asciicast
+;   https://github.com/rails/jquery-ujs/wiki/ajax
+; data-action inspired by Chris Granger's Overtone controller. In Rails the
+; action would typically be specified in href, but in Rails the action is
+; specified with an HTTP method and a URL, while Granger's fetch library
+; provides a higher level interface by which the action is simply specified
+; with a remote function name, so it doesn't seem appropriate to put a
+; function name where a URL is expected (actually, it might be ok if the
+; function name were prefixed with something like "cljs:", similar to how
+; the "javascript:" pseudo protocol prefix is used to put JavaScript code
+; directly into an href, but then parsing that action value would be a little
+; more complicated). Another reason to not put the function name in href is
+; that if JavaScript is disabled, when clicking on the link the browser would
+; try to open that, which would cause an error.
+;   http://www.chris-granger.com/2012/02/20/overtone-and-clojurescript/
+; The idea is to handle all confirmation messages like this with the same
+; ClojureScript code, in the same way that Rails does.
+;
 ; bind
 ; https://github.com/ibdknox/jayq/blob/master/src/jayq/core.cljs
 (jq/bind 

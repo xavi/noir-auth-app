@@ -51,7 +51,7 @@ code {
   padding-right: 0;
 }
 
-.content {
+.notice, .content {
   clear: right;
 }
 

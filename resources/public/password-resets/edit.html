@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Change password — noir-auth-app</title>
+    <meta content="initial-scale=1.0, width=device-width" name="viewport">
+    <link href="../css/reset.css" rel="stylesheet" type="text/css">
+    <link href="../css/default.css" rel="stylesheet" type="text/css">
+  </head>
+  <body>
+    <div id="page">
+      <div class="content">
+        <form action="/password-resets/:reset-code" method="POST">
+          <p class="error-message">Sample error message.</p>
+          <input name="_method" type="hidden" value="PUT">
+          <p><input name="password" type="password"
+                placeholder="password" data-i18n-placeholder="password" ></p>
+          <p><input type="submit" value="Save" data-i18n-value="save"></p>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

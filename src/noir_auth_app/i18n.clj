@@ -29,7 +29,7 @@
           "Activation code not found. Please make sure that the link that "
           "you opened in your browser is the same as the one you received "
           "by email. If problems continue, please contact us at "
-          contact-link " .")
+          (:link-start-tag %) config/contact-email (:link-end-tag %) " .")
    :activation-code-sent
       (renderer-fn
           "Email sent with your activation code. Thanks for signing up!")
@@ -39,18 +39,39 @@
    :admin-page-title
       (renderer-fn
           "Admin — " config/app-name)
+   :bad_login
+      (renderer-fn
+          "Wrong username/email or password")
    :cancel-change
       (renderer-fn
           "cancel change")
+   :change-email
+      (renderer-fn
+          "change email")
+   :change-password
+      (renderer-fn
+          "change password")
    :change-password-page-title
       (renderer-fn
           "Change password — " config/app-name)
+   :change-username
+      (renderer-fn
+          "change username")
+   :delete
+      (renderer-fn
+          "Delete")
+   :delete-account
+      (renderer-fn
+          "delete account")
+   :email
+      (renderer-fn
+          "Email")
    :email-change-code-not-found
       (renderer-fn
           "Email change code not found.")
    :email-change-confirmation-sent
       (renderer-fn
-          "Email sent to " (:email %)
+          "Email sent to " (:new_requested_email %)
           " with a link to confirm the address change.")
    :email-change-confirmed
       (renderer-fn
@@ -63,15 +84,20 @@
           "Email already taken.")
    :expired-activation-code
       (renderer-fn
-          "Expired activation code. <a data-method=\"post\" href=\""
-          (url "/resend-activation" {:email (:email %)})
-          "\">Get a new activation email with a new code</a>.")
+          "Expired activation code. " (:link-start-tag %)
+          "Get a new activation email with a new code" (:link-end-tag %) ".")
    :expired-password-reset-code
       (renderer-fn
           "Expired reset code. You can request a new one below.")
+   :forgot-password
+      (renderer-fn
+          "forgot password?")
    :forgot-password-page-title
       (renderer-fn
           "Forgot password — " config/app-name)
+   :hello-user
+      (renderer-fn
+          "Hello " (:username %) "!")
    :home-page-title
       (renderer-fn
           config/app-name)
@@ -86,9 +112,15 @@
       (renderer-fn
           "Username can contain only letters (no accents), numbers, "
           "dots (.), hyphens (-) and underscores (_).")
+   :log-in
+      (renderer-fn
+          "Log in")
    :login-page-title
       (renderer-fn
           "Login — " config/app-name)
+   :new-activation-email-sent
+      (renderer-fn
+          "New activation email sent.")
    :new-requested-email-taken
       (renderer-fn
           "Email already taken.")
@@ -98,18 +130,31 @@
           ; http://weavejester.github.com/hiccup/hiccup.util.html#var-url
           (url "/resend-activation" {:email (:new_requested_email %)})
           "\" data-method=\"post\">Resend confirmation email</a>.")
+   :next
+      (renderer-fn
+          "next")
+   :no-user-with-this-email
+      (renderer-fn
+          "No user with this email")
    :not-yet-activated
       (renderer-fn
-          "Account not yet activated. <a data-method=\"post\" href=\""
-          (url "/resend-activation" {:email (:email %)})
-          "\">Resend activation email</a>.")
+          "Account not yet activated. " (:link-start-tag %)
+          "Resend activation email" (:link-end-tag %) ".")
+   :password
+      (renderer-fn
+          "Password")
+   :password-change-instructions-sent
+      (renderer-fn
+          "Email sent with instructions on how to change your password. "
+          "Please check your inbox.")
    :password-changed
       (renderer-fn
           "Your password has been changed.")
    :password-reset-code-not-found
       (renderer-fn
           "Reset code not found. You can try asking for a new one below. "
-          "If problems continue, please contact us at " contact-link " .")
+          "If problems continue, please contact us at " (:link-start-tag %)
+          contact-link (:link-end-tag %) " .")
    :password-reset-code-taken
       (renderer-fn
           "Generated password reset code is already taken. "
@@ -123,22 +168,42 @@
    :resend-confirmation
       (renderer-fn
           "resend confirmation")
+   :reset-password
+      (renderer-fn
+          "Reset password")
+   :save
+      (renderer-fn
+          "Save")
    :settings-page-title
       (renderer-fn
           "Settings — " config/app-name)
+   :sign-up
+      (renderer-fn
+          "Sign up")
+   :sign-up-ended-with-ellipsis
+      (renderer-fn
+          "Sign up...")
    :signup-page-title
       (renderer-fn
           "Signup — " config/app-name)
    :taken-by-not-yet-activated-account
       (renderer-fn
-          "Email already taken but not confirmed yet. <a href=\""
-          ; http://weavejester.github.com/hiccup/hiccup.util.html#var-url
-          (url "/resend-activation" {:email (:email %)})
-          "\" data-method=\"post\">Resend confirmation email</a>.")
+          "Email already taken but not confirmed yet. " (:link-start-tag %)
+          "Resend confirmation email" (:link-end-tag %) ".")
    :update-error
       (renderer-fn
           "There was an error, please try again. If problems continue, "
           "contact us at " contact-link " .")
+   :user-already-active
+      (renderer-fn
+          "User already active, please "
+          (:link-start-tag %) "log in" (:link-end-tag %) ".")
+   :username
+      (renderer-fn
+          "Username")
+   :username-or-email
+      (renderer-fn
+          "Username or email")
    :username-taken
       (renderer-fn
           "That username is already taken.")
@@ -147,7 +212,13 @@
           "Username must be less than 30 characters.")
    :username-too-short
       (renderer-fn
-          "Username must be at least 2 characters.")})
+          "Username must be at least 2 characters.")
+   :verification-email
+      (renderer-fn
+          "Verification email")
+   :welcome
+      (renderer-fn
+          "Welcome!")})
 
 
 ; http://www.ibm.com/developerworks/java/library/j-clojure-protocols/

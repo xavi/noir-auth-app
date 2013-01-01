@@ -2,17 +2,15 @@
   (:use noir.core
         noir.fetch.remotes
         hiccup.page-helpers)
-  (:require [noir.request :as req]
+  (:require [net.cgrand.enlive-html :as h]
+            [noir.request :as req]
             [noir.response :as resp]
             [noir.session :as session]
             [clj-time.format :as time-format]
             [noir-auth-app.models.user :as users]
+            [noir-auth-app.i18n :as i18n]
             [noir-auth-app.views.common :as common]))
 
-
-;; Links
-
-(def user-actions [{:url "/blog/admin/user/add" :text "Add a user"}])
 
 ;;
 ; http://stackoverflow.com/questions/4095714/what-is-the-idiomatic-way-to-prepend-to-a-vector-in-clojure
@@ -22,36 +20,86 @@
 (def truncated-users-fields (map #(common/truncate (name %) 15) users-fields))
 
 
-;; Partials
-
-(defpartial action-item [{:keys [url text]}]
-  [:li (link-to url text)])
-
-(defpartial users-header []
-  [:tr (map #(identity [:th %]) truncated-users-fields)
-       [:th "Actions"]])
-
-(defpartial user-item [user]
-  ; without (identity) 
-  ;   Wrong number of args (0) passed to: PersistentVector
-  ; http://stackoverflow.com/questions/4921566/clojure-returning-a-vector-from-an-anonymous-function
-  [:tr (map #(identity [:td (% user)]) users-fields)
-       [:td "Delete (disabled in this demo)"]])
-       ; [:td (link-to {:data-confirm "Are you sure?"
-       ;                :data-action "delete-user"
-       ;                :data-params (:_id user)
-       ;                :data-callback "delete-user-callback"}
-       ;               "#" "Delete")]])
-                     
-
-;;
-
 ;; force you to be an admin to get to the admin section
 (pre-route "/admin*" {}
   (when-not (session/get :admin)
       (common/store-location)
       (resp/redirect "/login")))
 
+
+; The template contains several sample header and data cells (<th> and <td>),
+; but only one header cell and one data cell are intended to be used as
+; models, so the extra ones have to be removed. They're removed here, instead
+; of the defsnippet below, so that they don't have to be removed on every
+; request.
+; https://groups.google.com/group/enlive-clj/browse_thread/thread/874636a5839eea8e/5b5d6729f5e4c982
+(def index-resource
+  ; The "at" form is the most important form in Enlive. There are implicit at
+  ; forms in snippet and template.
+  ; https://github.com/cgrand/enlive#the-at-form
+  (h/flatmap #(h/at %
+                  [:tbody [:tr (h/but h/first-child)]]
+                    nil
+                  ; Selects all <th> and <td> nodes that do not contain
+                  ; "actions" in their class attribute and are not the first
+                  ; child of their parent.
+                  ; Enlive's "but" is equivalent to CSS :not (it's named
+                  ; "but" to not clash with clojure.core/not).
+                  ; In Enlive selectors, Clojure sets mean "or".
+                  ; https://github.com/cgrand/enlive#selectors-101
+                  ; http://clojure.org/data_structures#Data Structures-Sets
+                  [[#{:th :td}
+                        (h/but (h/attr-contains :class "actions"))
+                        (h/but h/first-child)]]
+                    nil)
+             ; loads the HTML resource and returns a seq of nodes
+             (h/html-resource "public/admin/index.html")))
+
+
+(h/defsnippet index-content index-resource [:.content :> h/any-node]
+  [{:keys [error users-fields truncated-users-fields page-users
+           next-page-first-created-at]}]
+
+  [:.error-message]
+    (when error (h/html-content error))
+
+  [[:th (h/but (h/attr-contains :class "actions"))]]
+    (h/clone-for [field-name truncated-users-fields]
+        (h/content field-name))
+
+  ; https://groups.google.com/group/enlive-clj/msg/75e4c631427546da
+  [:tbody :tr]
+    (h/clone-for [user page-users]
+        ; https://github.com/cgrand/enlive/wiki/Table-and-Layout-Tutorial%2C-Part-4%3A-Duplicating-Elements-and-Nested-Transformations
+        [[:td (h/but (h/attr-contains :class "actions"))]]
+          (h/clone-for [k users-fields]
+              ; (:_id user) is an ObjectId, the (str) below is used to
+              ; convert it to a string, otherwise
+              ;   java.lang.IllegalArgumentException:
+              ;   Don't know how to create ISeq from: org.bson.types.ObjectId
+              ; See users/delete! comments for details about ObjectId.
+              (h/content (str (k user))))
+        [(h/attr= :data-action "delete-user")]
+          (h/substitute "Delete (disabled in this demo)"))
+          ; (h/set-attr :data-callback "delete-user-callback"
+          ;             :data-confirm "Are you sure?"
+          ;             :data-params (:_id user)))
+
+  ; If there's a next page, or the <p> doesn't contain the button link,
+  ; returns the <p> node as is, otherwise removes it.
+  [:p]
+    ; Enlive's "select" returns the seq of nodes or fragments matched by the
+    ; specified selector
+    ; https://github.com/cgrand/enlive/blob/master/src/net/cgrand/enlive_html.clj
+    ; http://clojure.github.com/clojure/clojure.core-api.html#clojure.core/empty?
+    #(if (or next-page-first-created-at (empty? (h/select % [:a.button])))
+         %
+         nil)
+
+  [:a.button]
+    (when next-page-first-created-at
+          (h/set-attr :href (url "/admin" 
+                                 {:until next-page-first-created-at}))))
 
 ;; Pages
 
@@ -73,7 +121,6 @@
 ; http://developers.facebook.com/docs/reference/api/
 ;
 (defpage "/admin" {:keys [until]}
-  
   ; Caveats:
   ;
   ; Notice that this paging doesn't work with nullable columns:
@@ -109,19 +156,17 @@
             (if next-page-first-created-at (butlast users-batch) users-batch)]
 
     (common/admin-layout
-        (when (and until (nil? parsed-until-time)) 
-              [:p "Unparseable <code>until</code> parameter"])
-        ; http://www.w3.org/TR/html-markup/table.html#table
-        [:table
-          [:thead (users-header)]
-          [:tbody (map user-item page-users)]]
-        ; http://weavejester.github.com/hiccup/hiccup.util.html#var-url
-        (when next-page-first-created-at
-              ; http://www.usabilitypost.com/2012/01/10/pressed-button-state-with-css3/
-              [:p (link-to {:class "button"}
-                           (url "/admin" 
-                                {:until next-page-first-created-at})
-                           "next")]))))
+        {:title (i18n/translate :admin-page-title)
+         :nav (common/navigation-menu)
+         :content
+            (index-content {:error
+                                (when (and until (nil? parsed-until-time))
+                                      "Unparseable <code>until</code> parameter")
+                            :users-fields users-fields
+                            :truncated-users-fields truncated-users-fields
+                            :page-users page-users
+                            :next-page-first-created-at
+                                next-page-first-created-at})})))
 
 ;
 ; https://github.com/ibdknox/fetch

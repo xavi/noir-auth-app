@@ -1,14 +1,17 @@
 (ns noir-auth-app.views.common
   (:use [noir.core :only [defpartial]]
+        [hiccup.core :only [escape-html]]
         [hiccup.page-helpers :only [include-css include-js javascript-tag
                                     html5 link-to url]])
 
-  (:require [noir-auth-app.models.user :as users]
+  (:require [net.cgrand.enlive-html :as h]
+            [noir-auth-app.models.user :as users]
             [noir-auth-app.i18n :as i18n]
             [clojure.string :as string]
             [noir.request :as req]
             [noir.response :as resp]
-            [noir.session :as session]))
+            [noir.session :as session]
+            [noir-auth-app.config :as config]))
 
 
 ; http://items.sjbach.com/567/critiquing-clojure#2
@@ -16,25 +19,6 @@
 
 
 ;; Helper partials
-
-; http://webnoir.org/autodoc/1.2.1/noir.core-api.html#noir.core/defpartial
-(defpartial link-item [{:keys [url cls text]}]
-  [:li
-    (link-to {:class cls} url text)])
-
-; This expects a vector or sequence of keywords and/or strings (keywords
-; identify error messages, strings are the messages themselves), and
-; optionally, a map. The map contains values that may have to be interpolated
-; into the string.
-;
-; Notice that the rest param (the param after the &) is destructured
-; ([options] instead of simply options). That's to get a map instead of a
-; sequence containing a map, as Clojure sets the rest param with a sequence
-; containing the "arguments that exceed the positional params"
-; http://clojure.org/special_forms#Special Forms--(fn name? [params* ] exprs*)
-(defpartial error-text [errors & [options]]
-  (when errors
-    [:p (string/join "<br/>" (i18n/translate errors options))]))
 
 (defpartial include-client-code []
   ; JavaScript loaded just before the closing BODY tag in order to optimize
@@ -53,51 +37,219 @@
   (include-js "http://code.jquery.com/jquery-1.7.1.min.js")
   (include-js "/js/cljs.js"))
 
-(defpartial navigation-menu []
-  [:div.nav 
-    [:ul (if (current-user)
-             ; see "Expanding seqs"
-             ; https://github.com/weavejester/hiccup/wiki/Syntax
-             (list (when (session/get :admin) [:li (link-to "/admin" "admin")])
-                   [:li (link-to "/settings" "settings")]
-                   [:li (link-to {:data-method "post"} "/logout" "log out")])
-             [:li (link-to "/login" "log in")])]])
+; The third argument to defsnippet is a selector that indicates the root
+; element within the loaded HTML file to which transformations should be
+; applied. [:#navs] here ensures that we discard the <html> and <body>
+; elements that Enlive adds implicitly when loading snippets and templates.
+; p. 551 of "Clojure Programming"
+; https://github.com/swannodette/enlive-tutorial/blob/master/src/tutorial/template3.clj
+(h/defsnippet not-logged-in-nav "public/navs.html" [:#not-logged-in-nav] [])
+(h/defsnippet logged-in-nav "public/navs.html" [:#logged-in-nav] [])
+
+(defn navigation-menu []
+  (if (current-user) (logged-in-nav) (not-logged-in-nav)))
 
 
 ;; Layouts
 
-(defpartial layout [title & content]
-  (html5
-    [:head
-      [:title title]
-      ; see the section "A room with a viewport" in Ethan Marcotte's
-      ; "Responsive Web Design"
-      [:meta {:name "viewport" :content "initial-scale=1.0, width=device-width"}]
-      (include-css "/css/reset.css")
-      (include-css "/css/default.css")
-      [:link {:rel "icon" :type "image/png" :href "http://127.0.0.1:5000/favicon.ico?v=2"}]
-      ]
-    [:body
-      [:div#page
-        ; https://github.com/ring-clojure/ring/blob/master/SPEC
-        (when-not (= (:uri (req/ring-request)) "/login") (navigation-menu))
-        ; maybe ids make more sense here (div#nav, div#content)
-        [:div.content content]]
-      (include-client-code)]))
+(defn translate-html-content
+  "Returns a transformation function to be used with Enlive to translate the
+  content of an HTML element as specified in its data-i18n attribute. The
+  value of this attribute is used to find the translation."
+  ; Reference
+  ; http://stackoverflow.com/questions/12586849/append-to-an-attribute-in-enlive
+  [interpolation-map]
+  (fn [node]
+    (let [t (i18n/translate (keyword (get-in node [:attrs :data-i18n]))
+                            interpolation-map)]
+      ((h/content t) node))))
 
-(defpartial admin-layout [& content]
-  (html5
-    [:head
-      [:title (i18n/translate :admin-page-title)]
-      ; see the section "A room with a viewport" in Ethan Marcotte's
-      ; "Responsive Web Design"
-      [:meta {:name "viewport" :content "initial-scale=1.0, width=device-width"}]
-      (include-css "/css/reset.css" "/css/default.css" "/css/admin.css")]
-    [:body
-      [:div#page
-        (navigation-menu)
-        [:div.content content]]
-      (include-client-code)]))
+(defn translate-html-attr
+  "Returns a transformation function to be used with Enlive to translate the
+  value of the specified HTML attribute.
+  The translation must be specified in the HTML markup using another
+  attribute with the same name as the one to translate but prefixed with
+  data-i18n- . The value of this attribute will be used as the key to find
+  the translation. Ex.
+    <input name='password' type='password'
+           placeholder='Password' data-i18n-placeholder='password'/>
+    =>
+    <input name='password' type='password'
+           placeholder='Contraseña' data-i18n-placeholder='password'/>"
+  [attr interpolation-map]
+  (fn [node]
+    (let [i18n-attr (keyword (str "data-i18n-" (name attr)))
+          t (i18n/translate (keyword (get-in node [:attrs i18n-attr]))
+                            interpolation-map)]
+      ((h/set-attr attr t) node))))
+
+; The content of the flash will be displayed as a notice.
+(h/deftemplate layout "public/layout.html"
+  ; https://github.com/swannodette/enlive-tutorial/blob/master/src/tutorial/template3.clj
+  [{:keys [title nav content interpolation-map]}]
+
+  ; content is a HOF ( http://en.wikipedia.org/wiki/Higher-order_function )
+  ; that returns a function that will set the body of matched elements to the
+  ; value(s) provided to content.
+  ; See p. 547 of "Clojure Programming".
+  [:title]
+    (h/content title)
+
+  ; layout.html uses relative paths for stylesheets (ex. css/default.css) so
+  ; that they work locally. The problem is that the server uses this layout
+  ; to serve pages in different URL paths (ex. /login and
+  ; /activate/:activation-code), and for the stylesheet links to work for any
+  ; page (whatever its URL path is), they should be specified using absolute
+  ; paths (ex. /css/default.css). Below, these relative paths are converted
+  ; to absolute so that they work for any page, whatever its URL path is.
+  ; http://diveintohtml5.info/semantics.html#link
+  ; http://diveintohtml5.info/semantics.html#rel-stylesheet
+  ; http://cgrand.github.com/enlive/syntax.html
+  ; p. 548 of "Clojure Programming"
+  [[:link (h/attr= :rel "stylesheet")]]
+    (fn [node]
+      ((h/set-attr :href (str "/" (get-in node [:attrs :href]))) node))
+
+  ; when there's no nav (navigation) to display, the when form evaluates to
+  ; nil, and the nav placeholder is removed.
+  ; p. 550 of "Clojure Programming"
+  [:.nav]
+    (when nav (h/content nav))
+
+  ; flash notice displayed here in the layout like it's conventional in Rails
+  ; http://guides.rubyonrails.org/action_controller_overview.html#the-flash
+  ; http://webnoir.org/tutorials/sessions
+  [:.notice]
+    (when-let [notice (session/flash-get)] (h/content notice))
+
+  [:.content]
+    (h/content content)
+
+  ; Where content replaces the child content of a selected element, append
+  ; appends to it.
+  ; See p. 554 of "Clojure Programming"
+  ; html-snippet prevents Enlive from escaping the code.
+  [:body]
+    (h/append (h/html-snippet (include-client-code)))
+
+  [(h/attr? :data-i18n)]
+    (translate-html-content interpolation-map)
+
+  [(h/attr? :data-i18n-placeholder)]
+    (translate-html-attr :placeholder interpolation-map)
+
+  [(h/attr? :data-i18n-value)]
+    (translate-html-attr :value interpolation-map))
+
+
+;
+(h/deftemplate admin-layout "public/admin-layout.html"
+  [{:keys [title nav content interpolation-map]}]
+
+  [:title]
+    (h/content title)
+
+  [:.nav]
+    (when nav (h/content nav))
+
+  [:.content]
+    (h/content content)
+
+  ; Where content replaces the child content of a selected element, append
+  ; appends to it.
+  ; See p. 554 of "Clojure Programming"
+  ; html-snippet prevents Enlive from escaping the code.
+  [:body]
+    (h/append (h/html-snippet (include-client-code)))
+
+  [(h/attr? :data-i18n)]
+    (translate-html-content interpolation-map)
+
+  [(h/attr? :data-i18n-placeholder)]
+    (translate-html-attr :placeholder interpolation-map)
+
+  [(h/attr? :data-i18n-value)]
+    (translate-html-attr :value interpolation-map))
+
+
+;
+(defn set-field-value-from-model
+  "Returns a transformation function to be used with Enlive to set the value
+  of an HTML field element to the corresponding value of the specified model."
+  [model]
+  (fn [node]
+    (let [field-name (get-in node [:attrs :name])]
+      ((h/set-attr :value (get model (keyword field-name))) node))))
+
+
+; Returns an HTML string
+(defn build-error-message [error-keyword & [interpolation-map]]
+  ; References:
+  ; http://guides.rubyonrails.org/i18n.html#using-safe-html-translations
+  ; Don't Translate Markup
+  ; http://developers.facebook.com/docs/internationalization/
+  (case error-keyword
+    ; activation errors
+    :activation-code-not-found
+        (i18n/translate
+            :activation-code-not-found
+            {:link-start-tag
+                (str "<a href=\"mailto:" config/contact-email "\">")
+             :link-end-tag
+                "</a>"})
+    :expired-activation-code
+        (i18n/translate
+            :expired-activation-code
+            {:link-start-tag
+                (str "<a data-method=\"post\" href=\""
+                     (url "/resend-activation"
+                          {:email (:email interpolation-map)})
+                     "\" data-method=\"post\">")
+             :link-end-tag
+                "</a>"})
+    ; login error
+    :not-yet-activated
+        (let [{:keys [username-or-email]} interpolation-map
+              user (users/find-by-username-or-email username-or-email)
+              link-start-tag
+                (str "<a data-method=\"post\" href=\""
+                     (url "/resend-activation" {:email (:email user)})
+                     "\" data-method=\"post\">")
+              link-end-tag "</a>"]
+          ; Notice that this is not HTML escaped here, otherwise the HTML
+          ; code for the links would be escaped too. So, if the i18n message
+          ; string contains characters that are not HTML safe, they should be
+          ; appropriately escaped in the source.
+          (i18n/translate
+              :not-yet-activated
+              {:link-start-tag link-start-tag :link-end-tag link-end-tag}))
+    ; password reset error
+    :password-reset-code-not-found
+        (i18n/translate
+                :password-reset-code-not-found
+                {:link-start-tag
+                    (str "<a href=\"mailto:" config/contact-email "\">")
+                 :link-end-tag
+                    "</a>"})
+    ; signup error
+    :taken-by-not-yet-activated-account
+        (let [{:keys [email]} interpolation-map
+              link-start-tag
+                (str "<a data-method=\"post\" href=\""
+                     (url "/resend-activation" {:email email})
+                     "\" data-method=\"post\">")
+              link-end-tag "</a>"]
+          (i18n/translate
+              :taken-by-not-yet-activated-account
+              {:link-start-tag link-start-tag :link-end-tag link-end-tag}))
+    ; resend-activation error
+    :user-already-active
+        (i18n/translate
+            :user-already-active
+            {:link-start-tag "<a href=\"/login\">" :link-end-tag "</a>"})
+    ; default
+    ; https://github.com/weavejester/hiccup/blob/0.3.7/src/hiccup/core.clj
+    (escape-html (i18n/translate error-keyword interpolation-map))))
 
 
 ; (defn admin? []

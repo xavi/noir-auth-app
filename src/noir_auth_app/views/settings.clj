@@ -1,13 +1,8 @@
 (ns noir-auth-app.views.settings
 	(use noir.core)
-    ; the version of Noir currently used (1.2.2) uses Hiccup 0.3.7, in 1.0
-    ; there's a new hiccup.element namespace which contains link-to for
-    ; example, which was previously part of the hiccup.page-helpers namespace.
-    ; https://github.com/ibdknox/noir/blob/1.2.2/project.clj
-  	(use hiccup.form-helpers)
-  	(use hiccup.page-helpers)
 
-	(:require [noir.session :as session]
+	(:require [net.cgrand.enlive-html :as h]
+            [noir.session :as session]
             [noir.validation :as vali]
             [noir.response :as resp]
             [noir-auth-app.models.mailer :as mailer]
@@ -30,75 +25,39 @@
   (common/ensure-logged-in))
 
 
-(defpage "/settings" {}
-  ; In a previous version of the code, (session/flash-get) was called for
-  ; each form below, but then only the first call was obtaining the flash
-  ; contents because "flashes in Noir have the lifetime of one retrieval,
-  ; meaning that after the first (flash-get) the value will be nil"
-  ; http://webnoir.org/tutorials/sessions
-  (let [{:keys [username email new_requested_email] :as user}
-                                                        (common/current-user)
-        flash-value (session/flash-get)]
+(h/defsnippet settings-content "public/settings.html" [:.content :> h/any-node]
+  [user errors]
+  ; https://github.com/noir-clojure/lib-noir/blob/master/src/noir/validation.clj
+  ; http://guides.rubyonrails.org/active_record_validations_callbacks.html#customizing-error-messages-css
+  [:.username-form :.error-message]
+    (h/clone-for [e (:username-form-errors errors)]
+                        (h/html-content (common/build-error-message e user)))
+  [:.email-notice]
+    ; When there's a new email waiting to be confirmed, the transformation
+    ; function returns the current node as is, otherwise it returns nil
+    ; (which will remove the matched .email-notice element).
+    ; https://groups.google.com/d/msg/enlive-clj/swkXHrzCU7U/qW081WsQiYQJ
+    #(when (:new_requested_email user) %)
+  [:.email-form :.error-message]
+    (h/clone-for [e (:email-form-errors errors)]
+                        (h/html-content (common/build-error-message e user)))
+  [:.password-notice]
+    (when-let [password-notice (:password-notice errors)]
+        (h/content (i18n/translate password-notice)))
+  [:.password-form :.error-message]
+    (h/clone-for [e (:password-form-errors errors)]
+                        (h/html-content (common/build-error-message e user)))
+  [[:input (h/attr= :type "text")]]
+    (common/set-field-value-from-model user))
 
-    (common/layout (i18n/translate :settings-page-title)
-        ; In Clojure using the key of a hash element as a function of the
-        ; hash, returns the value for that key, and on the other hand,
-        ; (:key nil) returns nil, so this works...
-        (common/error-text (:username-form-errors flash-value) user)
-        (form-to [:post "/username-changes"]
-                 ; http://weavejester.github.com/hiccup/hiccup.form.html#var-text-field
-                 [:p (text-field {:placeholder "Username"} 
-                                 :username username)]
-                 [:p (submit-button "change username")])
-        (when new_requested_email 
-              [:p (i18n/translate :email-change-confirmation-sent
-                                  {:email new_requested_email})
-                  [:br]
-                  (link-to {:data-method "post"}
-                           "/email-changes/resend-confirmation"
-                           (i18n/translate :resend-confirmation))
-                  " · "
-                  (link-to {:data-method "post"} "/email-changes/cancel"
-                           (i18n/translate :cancel-change))])
-        (common/error-text (:email-form-errors flash-value) user)
-        (form-to [:post "/email-changes"]
-                 [:p (text-field {:placeholder "Email"} :email email)]
-                 [:p (submit-button "change email")])
-        (common/error-text (:password-form-notices flash-value))
-        (form-to [:post "/password-changes"]
-                 [:p (password-field {:placeholder "Password"} :password)]
-                 [:p (submit-button "change password")])
-        ; data-confirm inspired by how Rails 3 handles JavaScript
-        ; confirmation messages
-        ;   http://railscasts.com/episodes/205-unobtrusive-javascript?view=asciicast
-        ;   https://github.com/rails/jquery-ujs/wiki/ajax
-        ; data-action inspired by Chris Granger's Overtone controller. In
-        ; Rails the action would typically be specified in href, but in
-        ; Rails the action is specified with an HTTP method and a URL,
-        ; while Granger's fetch library provides a higher level interface
-        ; by which the action is simply specified with a remote function
-        ; name, so it doesn't seem appropriate to put a function name where
-        ; a URL is expected (actually, it might be ok if the function name
-        ; were prefixed with something like "cljs:", similar to how
-        ; the "javascript:" pseudo protocol prefix is used to put JavaScript
-        ; code directly into an href, but then parsing that action value
-        ; would be a little more complicated). Another reason to not put the
-        ; function name in href is that if JavaScript is disabled, when
-        ; clicking on the link the browser would try to open that, which
-        ; would cause an error.
-        ;   http://www.chris-granger.com/2012/02/20/overtone-and-clojurescript/
-        ; The idea is to handle all confirmation messages like this with the
-        ; same ClojureScript code, in the same way that Rails does.
-        [:p (link-to {:data-confirm "Are you sure?"
-                      :data-action "delete-account"
-                      :data-callback "delete-account-callback"}
-                     "#" "delete account")])))
-        ; href is not required, but then the element is not displayed as a
-        ; hyperlink
-        ; http://dev.w3.org/html5/spec/single-page.html#attr-hyperlink-href
-        ; [:p [:a {:data-confirm "Are you sure?"
-        ;          :data-action "delete-account"}
-        ;         "delete account"]]))
+
+(defpage "/settings" {}
+  (let [user (common/current-user)]
+    (common/layout {:title (i18n/translate :settings-page-title)
+                    :nav (common/navigation-menu)
+                    :content (settings-content user (session/flash-get))
+                    :interpolation-map user})))
+
 
 ; curl -X POST -i http://127.0.0.1:5000/username-changes -d "username=test"
 (defpage [:post "/username-changes"] {new-username :username}
@@ -116,7 +75,7 @@
     (mailer/send-email 
         {:from config/emails-from
          :to new_requested_email
-         :subject "Verification email"
+         :subject (i18n/translate :verification-email)
          :body (str (common/base-url)
                     "/email-changes/" email_change_code "/verify")})))
 
@@ -208,8 +167,9 @@
 ;
 ; curl -X POST -i http://127.0.0.1:5000/password-changes -d "password=test"
 (defpage [:post "/password-changes"] {new-password :password}
-  (let [result (users/change-password! (session/get :user-id) new-password)
-        notices (if result [:password-changed] (vali/get-errors))]
-    (session/flash-put! {:password-form-notices notices})
+  (let [result (users/change-password! (session/get :user-id) new-password)]
+    (session/flash-put! (if result
+                            {:password-notice :password-changed}
+                            {:password-form-errors (vali/get-errors)}))
     (resp/redirect "/settings")))
 

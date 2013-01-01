@@ -572,10 +572,8 @@
         (update! (:_id user) (set-activation-code user))
         ; set-error returns nil
         ; https://github.com/ibdknox/noir/blob/master/src/noir/validation.clj
-        (vali/set-error :activation_code 
-                        (str "User already active, please "
-                             "<a href=\"/login\">log in</a>")))
-    (vali/set-error :email "No user with this email")))
+        (vali/set-error :activation_code :user-already-active))
+    (vali/set-error :email :no-user-with-this-email)))
 
 
 (defn login!
@@ -591,7 +589,7 @@
         (if (and stored-pass 
                  (crypt/compare password stored-pass))
             user
-            (vali/set-error :password "Wrong username/email or password"))
+            (vali/set-error :password :bad_login))
         (vali/set-error :activation_code :not-yet-activated))))
 
 

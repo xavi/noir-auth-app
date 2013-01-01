@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="initial-scale=1.0, width=device-width" name="viewport">
+    <link href="../css/reset.css" rel="stylesheet" type="text/css">
+    <link href="../css/default.css" rel="stylesheet" type="text/css">
+    <link href="../css/admin.css" rel="stylesheet" type="text/css">
+  </head>
+  <body>
+    <div id="page">
+
+      <div class="content">
+        <p class="error-message">Sample error message.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>header 1</th>
+              <th>header 2</th>
+              <th class="actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>row 1, data 1</td>
+              <td>row 1, data 2</td>
+              <td class="actions">
+                <a href="#" 
+                   data-action="delete-user" data-i18n="delete">Delete</a>
+              </td>
+            </tr><!-- 
+              necessary to avoid undesired whitespace,
+              see also http://stackoverflow.com/q/12168194/974795
+            --><tr>
+              <td>row 2, data 1</td>
+              <td>row 2, data 2</td>
+              <td class="actions">
+                <a href="#" 
+                   data-action="delete-user" data-i18n="delete">Delete</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          <a class="button" href="" data-i18n="next">next</a>
+        </p>
+      </div>
+
+    </div>
+  </body>
+</html>
