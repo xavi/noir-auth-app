@@ -54,4 +54,6 @@
           :pretty-print false
           :externs ["externs/jquery.js"]
         }}]}
+  ; besides warning users of earlier versions of Leiningen, this also forces Heroku to use 2.x
+  :min-lein-version "2.0.0"
   :main noir-auth-app.server)
