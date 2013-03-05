@@ -1,41 +1,49 @@
 (ns noir-auth-app.views.common
-  (:use [noir.core :only [defpartial]]
-        [hiccup.core :only [escape-html]]
-        [hiccup.page-helpers :only [include-css include-js javascript-tag
-                                    html5 link-to url]])
+  ; Although Enlive now includes a Hiccup-style helper (since 1.1.0), there's
+  ; some Hiccup functionality needed here that is not available in Enlive.
+  (:use [noir.request :only [*request*]]
+        [hiccup.core]
+        [hiccup.page :only [include-js]]
+        [hiccup.element :only [javascript-tag]]
+        [hiccup.util :only [escape-html url]])
+
+        ; [noir.core :only [defpartial]]
+        ; [hiccup.core :only [escape-html]]
+        ; [hiccup.page-helpers :only [include-css include-js javascript-tag
+        ;                             html5 link-to url]])
 
   (:require [net.cgrand.enlive-html :as h]
             [noir-auth-app.models.user :as users]
             [noir-auth-app.i18n :as i18n]
+            [noir-auth-app.config :as config]
             [clojure.string :as string]
             [noir.request :as req]
             [noir.response :as resp]
-            [noir.session :as session]
-            [noir-auth-app.config :as config]))
+            [noir.session :as session]))
 
 
 ; http://items.sjbach.com/567/critiquing-clojure#2
 (declare store-location current-user)
 
 
-;; Helper partials
+(defn include-client-code []
+  (html
+    ; JavaScript loaded just before the closing BODY tag in order to optimize
+    ; page rendering.
+    ;   http://www.peachpit.com/articles/article.aspx?p=1431494&seqNum=4
+    ; It's also done by Chris Granger in the overtoneCljs example
+    ;   https://github.com/ibdknox/overtoneCljs/blob/master/src/overtoneinterface/views/common.clj
+    ; and here
+    ;   http://djhworld.github.com/2012/02/12/getting-started-with-clojurescript-and-noir.html
+    ;
+    ; CLOSURE_NO_DEPS is to solve a problem with deps.js, see...
+    ; https://groups.google.com/d/topic/clojure/_WkdBGPhI-Q/discussion
+    (javascript-tag "var CLOSURE_NO_DEPS = true;")
 
-(defpartial include-client-code []
-  ; JavaScript loaded just before the closing BODY tag in order to optimize
-  ; page rendering.
-  ;   http://www.peachpit.com/articles/article.aspx?p=1431494&seqNum=4
-  ; It's also done by Chris Granger in the overtoneCljs example
-  ;   https://github.com/ibdknox/overtoneCljs/blob/master/src/overtoneinterface/views/common.clj
-  ; and here
-  ;   http://djhworld.github.com/2012/02/12/getting-started-with-clojurescript-and-noir.html
-  ;
-  ; CLOSURE_NO_DEPS is to solve a problem with deps.js, see...
-  ; https://groups.google.com/d/topic/clojure/_WkdBGPhI-Q/discussion
-  (javascript-tag "var CLOSURE_NO_DEPS = true;")
-  ; http://corfield.org/blog/post.cfm/getting-started-with-clojurescript-and-jquery-and-fw-1
-  ; TODO: use Google's CDN?
-  (include-js "http://code.jquery.com/jquery-1.7.1.min.js")
-  (include-js "/js/cljs.js"))
+    ; Loads jQuery from Google's CDN ( http://jquery.com/download/ )
+    ; This matches the version of jQuery in /externs/jquery.js
+    (include-js "//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js")
+    (include-js "/js/cljs.js")))
 
 ; The third argument to defsnippet is a selector that indicates the root
 ; element within the loaded HTML file to which transformations should be
@@ -120,7 +128,7 @@
   ; http://guides.rubyonrails.org/action_controller_overview.html#the-flash
   ; http://webnoir.org/tutorials/sessions
   [:.notice]
-    (when-let [notice (session/flash-get)] (h/content notice))
+    (when-let [notice (session/flash-get :notice)] (h/content notice))
 
   [:.content]
     (h/content content)
@@ -158,7 +166,6 @@
   ; Where content replaces the child content of a selected element, append
   ; appends to it.
   ; See p. 554 of "Clojure Programming"
-  ; html-snippet prevents Enlive from escaping the code.
   [:body]
     (h/append (h/html-snippet (include-client-code)))
 
@@ -248,20 +255,17 @@
             :user-already-active
             {:link-start-tag "<a href=\"/login\">" :link-end-tag "</a>"})
     ; default
-    ; https://github.com/weavejester/hiccup/blob/0.3.7/src/hiccup/core.clj
+    ; http://weavejester.github.com/hiccup/hiccup.util.html#var-escape-html
     (escape-html (i18n/translate error-keyword interpolation-map))))
 
 
-; (defn admin? []
-;   (session/get :admin))
+(defmacro ensure-logged-in [& body]
+  `(if (session/get :user-id)
+       (do ~@body)
+       (do
+         (store-location)
+         (resp/redirect "/login"))))
 
-; (defn logged-in? []
-;   (session/get :user-id))
-
-(defn ensure-logged-in []
-  (when-not (session/get :user-id)
-      (store-location)
-      (resp/redirect "/login")))
 
 ; Similar to Restful Authentication's current_user
 ; https://github.com/technoweenie/restful-authentication/blob/master/generators/authenticated/templates/authenticated_system.rb
@@ -287,8 +291,8 @@
 
 
 (defn base-url []
-  ; http://webnoir.org/autodoc/1.2.1/noir.request-api.html
-  (let [r (req/ring-request)
+  ; https://github.com/noir-clojure/lib-noir/blob/master/src/noir/request.clj
+  (let [r *request*
         s (name (r :scheme))
         ; http://clojuredocs.org/clojure_core/clojure.core/cond
         ; http://stackoverflow.com/questions/6321865/why-is-else-not-else-in-clojure
@@ -313,7 +317,7 @@
   ; I do not understand why Padrino stores the referring page instead of the current page
   ;   http://www.padrinorb.com/api/Padrino/Admin/Helpers/AuthenticationHelpers.html
   []
-  (let [r (req/ring-request)
+  (let [r *request*
         query-string (r :query-string)]
     ; https://github.com/ring-clojure/ring/blob/master/SPEC
     (session/put! :return-to 

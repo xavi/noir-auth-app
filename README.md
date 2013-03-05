@@ -1,6 +1,6 @@
 # noir-auth-app
 
-A complete authentication web app based on Clojure/ClojureScript, Noir, Enlive and MongoDB.
+A complete authentication web app based on Clojure/ClojureScript, Compojure, lib-noir, Enlive and MongoDB.
 
 It's meant to be used as a base app for building Clojure web apps that require authentication.
 
@@ -16,7 +16,7 @@ It features...
 
 See the [URL Tour](#url-tour) for a more detailed look at the functionality.
 
-Besides [Noir](http://webnoir.org/), noir-auth-app also uses [Enlive](https://github.com/cgrand/enlive) for templating, [CongoMongo](https://github.com/aboekhoff/congomongo) to interact with the database, and [Postal](https://github.com/drewr/postal) to send emails.
+Besides [Compojure](https://github.com/weavejester/compojure) and [lib-noir](https://github.com/noir-clojure/lib-noir), noir-auth-app also uses [Enlive](https://github.com/cgrand/enlive) for templating, [CongoMongo](https://github.com/aboekhoff/congomongo) to interact with the database, [Postal](https://github.com/drewr/postal) to send emails, and [shoreleave-remote](https://github.com/shoreleave/shoreleave-remote) (together with [shoreleave-remote-ring](https://github.com/shoreleave/shoreleave-remote-ring)) to call remote functions on the server from ClojureScript.
 
 You can see the app running at http://noir-auth-app.herokuapp.com (in this demo all users are given admin privileges, so that you can see the admin UI, but account deletions from this UI are disabled).
 

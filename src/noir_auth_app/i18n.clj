@@ -1,7 +1,6 @@
 (ns noir-auth-app.i18n
-  (use hiccup.page-helpers)
-  (use noir-auth-app.utilities)
-
+  (:use [hiccup.util :only [url]]
+        [noir-auth-app.utilities])
   (:require [noir-auth-app.config :as config]))
 
 

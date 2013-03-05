@@ -1,6 +1,5 @@
 (ns noir-auth-app.views.settings
-	(use noir.core)
-
+  (:use [compojure.core :only (defroutes routes GET POST)])
 	(:require [net.cgrand.enlive-html :as h]
             [noir.session :as session]
             [noir.validation :as vali]
@@ -10,20 +9,6 @@
             [noir-auth-app.views.common :as common]
             [noir-auth-app.i18n :as i18n]
             [noir-auth-app.config :as config]))
-
-
-(pre-route "/settings" {}
-  (common/ensure-logged-in))
-
-(pre-route "/username-changes" {}
-  (common/ensure-logged-in))
-
-(pre-route "/email-changes*" {}
-  (common/ensure-logged-in))
-
-(pre-route "/password-changes" {}
-  (common/ensure-logged-in))
-
 
 (h/defsnippet settings-content "public/settings.html" [:.content :> h/any-node]
   [user errors]
@@ -49,24 +34,6 @@
                         (h/html-content (common/build-error-message e user)))
   [[:input (h/attr= :type "text")]]
     (common/set-field-value-from-model user))
-
-
-(defpage "/settings" {}
-  (let [user (common/current-user)]
-    (common/layout {:title (i18n/translate :settings-page-title)
-                    :nav (common/navigation-menu)
-                    :content (settings-content user (session/flash-get))
-                    :interpolation-map user})))
-
-
-; curl -X POST -i http://127.0.0.1:5000/username-changes -d "username=test"
-(defpage [:post "/username-changes"] {new-username :username}
-  (users/change-username! (session/get :user-id) new-username)
-  ; this may have to be changed when upgrading to Noir 1.3 (currently
-  ; using 1.2.2) as in 1.3 flash-put! expects two parameters
-  ; http://webnoir.org/autodoc/1.3.0/noir.session.html#var-flash-put%21
-  (session/flash-put! {:username-form-errors (vali/get-errors)})
-  (resp/redirect "/settings"))
 
 ;
 (defn- email-email-change-code [{:keys 
@@ -112,28 +79,45 @@
            ; with a field name, not when called without params.
            (vali/get-errors)))
 
+
+;;; Actions
+
+(defn index-action []
+  (let [user (common/current-user)]
+    (common/layout {:title (i18n/translate :settings-page-title)
+                    :nav (common/navigation-menu)
+                    :content (settings-content user
+                                               (session/flash-get :errors))
+                    :interpolation-map user})))
+
+; curl -X POST -i http://127.0.0.1:5000/username-changes -d "username=test"
+(defn username-changes-action [{new-username :username}]
+  (users/change-username! (session/get :user-id) new-username)
+  (session/flash-put! :errors {:username-form-errors (vali/get-errors)})
+  (resp/redirect "/settings"))
+
 ; curl -X POST -i http://127.0.0.1:5000/email-changes -d "email=test@example.com"
-(defpage [:post "/email-changes"] {new-email :email}
+(defn email-changes-action [{new-email :email}]
   (when (not= new-email (:email (common/current-user)))
       (if-let [updated-user (users/request-email-change!
                                         (session/get :user-id) new-email)]
         (email-email-change-code updated-user)
         (session/flash-put!
-            {:email-form-errors (i18n/translate
-                                        (get-email-change-errors)
+            :errors {:email-form-errors
+                        (i18n/translate (get-email-change-errors)
                                         {:new_requested_email new-email})})))
   (resp/redirect "/settings"))
 
 ; HTTP POST is used instead of GET for the same reason it's used for /logout
 ; (see comment for /logout in noir-auth-app.views.users). See also
 ; http://news.ycombinator.com/item?id=4439599
-(defpage [:post "/email-changes/cancel"] {}
+(defn email-changes-cancel-action []
   (users/cancel-email-change! (session/get :user-id))
   (resp/redirect "/settings"))
 
 ; HTTP POST is used instead of GET for the same reason it's used for /logout
 ; (see comment for /logout in noir-auth-app.views.users)
-(defpage [:post "/email-changes/resend-confirmation"] {}
+(defn email-changes-resend-confirmation-action []
   (email-email-change-code (common/current-user))
   (resp/redirect "/settings"))
 
@@ -156,20 +140,40 @@
 ; address is reserved, but the thing is that if you specify the address of
 ; someone that is not a Twitter user, you're effectively preventing him from
 ; signing up to Twitter while the reservation holds.
-(defpage "/email-changes/:email-change-code/verify" {:keys [email-change-code]}
-  (if (users/change-email! (session/get :user-id) email-change-code)
-      (session/flash-put! {:email-form-errors [:email-change-confirmed]})
-      (session/flash-put! {:email-form-errors (get-email-change-errors)}))
-  (resp/redirect "/settings"))
+(defn email-changes-verify-action [{:keys [email-change-code]}]
+  (let [result (users/change-email! (session/get :user-id) email-change-code)]
+    (session/flash-put! :errors
+                        {:email-form-errors (if result
+                                                [:email-change-confirmed]
+                                                (get-email-change-errors))})
+    (resp/redirect "/settings")))
 
 ; #TODO: depending on the session length, the old password should probably be
 ; required to set a new one
 ;
 ; curl -X POST -i http://127.0.0.1:5000/password-changes -d "password=test"
-(defpage [:post "/password-changes"] {new-password :password}
+(defn password-changes-action [{new-password :password}]
   (let [result (users/change-password! (session/get :user-id) new-password)]
-    (session/flash-put! (if result
+    (session/flash-put! :errors
+                        (if result
                             {:password-notice :password-changed}
                             {:password-form-errors (vali/get-errors)}))
     (resp/redirect "/settings")))
 
+
+(defroutes settings-routes
+  ; https://github.com/weavejester/compojure/wiki/Destructuring-Syntax
+  (GET "/settings" []
+    (common/ensure-logged-in (index-action)))
+  (POST "/username-changes" {params :params}
+    (common/ensure-logged-in (username-changes-action params)))
+  (POST "/email-changes" {params :params}
+    (common/ensure-logged-in (email-changes-action params)))
+  (POST "/email-changes/cancel" []
+    (common/ensure-logged-in (email-changes-cancel-action)))
+  (POST "/email-changes/resend-confirmation" []
+    (common/ensure-logged-in (email-changes-resend-confirmation-action)))
+  (GET "/email-changes/:email-change-code/verify" {params :params}
+    (common/ensure-logged-in (email-changes-verify-action params)))
+  (POST "/password-changes" {params :params}
+    (common/ensure-logged-in (password-changes-action params))))

@@ -1,7 +1,7 @@
 (ns noir-auth-app.views.admin
-  (:use noir.core
-        noir.fetch.remotes
-        hiccup.page-helpers)
+  (:use [compojure.core :only (defroutes GET)]
+        [hiccup.util :only (url)]
+        [shoreleave.middleware.rpc :only (defremote)])
   (:require [net.cgrand.enlive-html :as h]
             [noir.request :as req]
             [noir.response :as resp]
@@ -11,7 +11,6 @@
             [noir-auth-app.i18n :as i18n]
             [noir-auth-app.views.common :as common]))
 
-
 ;;
 ; http://stackoverflow.com/questions/4095714/what-is-the-idiomatic-way-to-prepend-to-a-vector-in-clojure
 (def users-fields (into [:_id] users/collection-fields))
@@ -19,12 +18,13 @@
 ;
 (def truncated-users-fields (map #(common/truncate (name %) 15) users-fields))
 
-
-;; force you to be an admin to get to the admin section
-(pre-route "/admin*" {}
-  (when-not (session/get :admin)
-      (common/store-location)
-      (resp/redirect "/login")))
+;; ensures that only admin users can get to the admin section
+(defmacro ensure-admin [& body]
+  `(if (session/get :admin)
+       (do ~@body)
+       (do
+         (common/store-location)
+         (resp/redirect "/login"))))
 
 
 ; The template contains several sample header and data cells (<th> and <td>),
@@ -101,7 +101,8 @@
           (h/set-attr :href (url "/admin" 
                                  {:until next-page-first-created-at}))))
 
-;; Pages
+
+;;; Actions
 
 ; Notice that if the URL is
 ;   /admin/users?until=2012-06-16T21:30:17.001+02:00
@@ -120,7 +121,7 @@
 ; Example of use of "until" (and "since") in an API
 ; http://developers.facebook.com/docs/reference/api/
 ;
-(defpage "/admin" {:keys [until]}
+(defn index-action [until]
   ; Caveats:
   ;
   ; Notice that this paging doesn't work with nullable columns:
@@ -168,11 +169,18 @@
                             :next-page-first-created-at
                                 next-page-first-created-at})})))
 
-;
-; https://github.com/ibdknox/fetch
+
+(defroutes admin-routes
+  ; https://github.com/weavejester/compojure/wiki/Destructuring-Syntax
+  (GET "/admin" [until]
+    (ensure-admin (index-action until))))
+
+
+;;; Remotes
+
+; https://github.com/shoreleave/shoreleave-remote-ring
 (defremote delete-user [user-id]
   (when (session/get :admin)
         ; https://github.com/aboekhoff/congomongo/issues/77
         (println "admin will delete" user-id)
         (users/delete! user-id)))
-

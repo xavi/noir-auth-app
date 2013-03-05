@@ -1,7 +1,6 @@
 (ns noir-auth-app.views.users
-  (use noir.core)
-  (use noir.fetch.remotes)
-  
+  (:use [compojure.core :only (defroutes GET POST)]
+        [shoreleave.middleware.rpc :only (defremote)])
   (:require [net.cgrand.enlive-html :as h]
             [noir.session :as session]
             [noir.validation :as vali]
@@ -32,38 +31,6 @@
   [:.error-message] (h/clone-for [e errors]
                         (h/html-content (common/build-error-message e user)))
   [[:input (h/attr= :type "text")]] (common/set-field-value-from-model user))
-
-; Besides the typical case of signing up when not logged in, it's also
-; possible to sign up for an account while logged in with another account.
-;
-; The destructuring form used here is just like the one you'd use in a (let)
-; form, so you can use all of clojure's powerful destructuring concepts.
-; http://webnoir.org/tutorials/routes
-; Note that
-;   (defpage "/signup" [new-user]
-; doesn't work, it produces
-; java.lang.UnsupportedOperationException: nth not supported on this type: PersistentArrayMap
-; Same for
-;   (defpage "/signup" [{:as new-user}]
-; It makes sense because the square brackets here don't have to confused as
-; the parameters of a function, as they are actually the second parameter of
-; defpage, which is a destructuring form for the params of the request
-;   http://webnoir.org/tutorials/routes
-;
-(defpage "/signup" {:as user}
-  (common/layout {:title (i18n/translate :signup-page-title)
-                  :nav (common/navigation-menu)
-                  ; (vali/get-errors) returns something like...
-                  ; (:password-too-short :invalid-email :invalid-username :username-too-short)
-                  :content (signup-content user (vali/get-errors))}))
-
-(defpage [:post "/signup"] {:as new-user}
-  (if-let [saved-user (users/create! new-user)]
-    (do (email-activation-code saved-user)
-        (session/flash-put! (i18n/translate :activation-code-sent))
-        (resp/redirect "/login"))
-    ; http://webnoir.org/autodoc/1.2.1/noir.core-api.html#noir.core/render
-    (render "/signup" new-user)))
 
 
 (defn save-user-info-in-session [{:keys [_id lowercase_username]}]
@@ -100,6 +67,67 @@
                         (common/build-error-message e interpolation-map))))))
 
 
+; [:.content :> h/any-node]
+; all children (including text nodes and comments) of the .content element
+; https://github.com/cgrand/enlive
+(h/defsnippet login-content "public/login.html" [:.content :> h/any-node]
+  [user errors]
+  ; https://github.com/noir-clojure/lib-noir/blob/master/src/noir/validation.clj
+  ; http://guides.rubyonrails.org/active_record_validations_callbacks.html#customizing-error-messages-css
+  [:.error-message] (h/clone-for [e errors]
+                        (h/html-content (common/build-error-message e user)))
+  ; https://groups.google.com/group/enlive-clj/browse_thread/thread/2725d46c018beb7
+  ; Remember that set-attr returns a function (as any other Enlive
+  ; transformation function) that expects an element (the matching element).
+  ; (see p. 550 of "Clojure Programming")
+  ; About the nested vectors, see p. 549 of "Clojure Programming".
+  ; See also "Selectors 101" in
+  ; https://github.com/cgrand/enlive
+  [[:input (h/attr= :type "text")]] (common/set-field-value-from-model user))
+
+
+;;; Actions
+;;;
+;;; Note:
+;;; The term "action" is used here to refer to a function that returns a
+;;; response that is meant to be processed by Compojure to convert it into an
+;;; appropriate Ring response.
+;;; The use of this term is inspired by Rails
+;;; http://guides.rubyonrails.org/action_controller_overview.html#methods-and-actions
+
+; Besides the typical case of signing up when not logged in, it's also
+; possible to sign up for an account while logged in with another account.
+;
+; The destructuring form used here is just like the one you'd use in a (let)
+; form, so you can use all of clojure's powerful destructuring concepts.
+; http://webnoir.org/tutorials/routes
+; Note that
+;   (defpage "/signup" [new-user]
+; doesn't work, it produces
+; java.lang.UnsupportedOperationException: nth not supported on this type: PersistentArrayMap
+; Same for
+;   (defpage "/signup" [{:as new-user}]
+; It makes sense because the square brackets here don't have to confused as
+; the parameters of a function, as they are actually the second parameter of
+; defpage, which is a destructuring form for the params of the request
+;   http://webnoir.org/tutorials/routes
+;
+(defn new-user-action [user]
+  (common/layout {:title (i18n/translate :signup-page-title)
+                  :nav (common/navigation-menu)
+                  ; (vali/get-errors) returns something like...
+                  ; (:password-too-short :invalid-email :invalid-username :username-too-short)
+                  :content (signup-content user (vali/get-errors))}))
+
+(defn create-user-action [new-user]
+  (if-let [saved-user (users/create! new-user)]
+    (do (email-activation-code saved-user)
+        (session/flash-put! :notice (i18n/translate :activation-code-sent))
+        (resp/redirect "/login"))
+    ; http://webnoir.org/autodoc/1.2.1/noir.core-api.html#noir.core/render
+    ;(render "/signup" new-user)))
+    (new-user-action new-user)))
+
 ; Should the activation/password resets tokens expire? YES
 ; http://stackoverflow.com/questions/4515469/why-should-we-make-account-activation-password-reset-links-expire-after-some-tim
 ; See for example the following case, which may be entirely possible:
@@ -118,7 +146,7 @@
 ; When the activation is successful, the user will be automatically logged in.
 ; https://github.com/matthooks/authlogic-activation-tutorial
 ; http://stackoverflow.com/questions/2459285/do-i-need-to-auto-login-after-account-activation
-(defpage "/activate/:activation-code" {:keys [activation-code]}
+(defn activate-action [activation-code]
   (if-let [user (users/activate! activation-code)]
     (do ; Before logging in the just activated user, clears out the session to
         ; effectively log out any currently logged in user, and remove any
@@ -130,7 +158,7 @@
         ; http://webnoir.org/autodoc/1.2.1/noir.session-api.html#noir.session/clear!
         (session/clear!)
         (save-user-info-in-session user)
-        (session/flash-put! "Your account has been activated. Welcome!")
+        (session/flash-put! :notice "Your account has been activated. Welcome!")
         (resp/redirect "/"))
     ; If activation failed because the code has expired
     ; (:expired-activation-code error), the email associated to that code is
@@ -141,7 +169,6 @@
         (common/layout {:title (i18n/translate :account-activation-failed-page-title)
                         :nav (common/navigation-menu)
                         :content (errors-content (vali/get-errors) user)}))))
-
 
 ; See Matt Hooks' Authlogic Activation Tutorial
 ; https://github.com/matthooks/authlogic-activation-tutorial
@@ -162,72 +189,66 @@
 ; (see comment for /logout below). See also
 ; http://news.ycombinator.com/item?id=4439599
 ;
-(defpage [:post "/resend-activation"] {email :email}
+(defn resend-activation-action [email]
   (if-let [user (users/reset-activation-code! email)]
     (do (email-activation-code user)
-        (session/flash-put! (i18n/translate :new-activation-email-sent))
+        (session/flash-put! :notice (i18n/translate :new-activation-email-sent))
         (resp/redirect "/login"))
     (common/layout {:title (i18n/translate :resend-activation-page-title)
                     :nav (common/navigation-menu)
                     :content (errors-content (vali/get-errors))})))
 
-
-; [:.content :> h/any-node]
-; all children (including text nodes and comments) of the .content element
-; https://github.com/cgrand/enlive
-(h/defsnippet login-content "public/login.html" [:.content :> h/any-node]
-  [user errors]
-  ; https://github.com/noir-clojure/lib-noir/blob/master/src/noir/validation.clj
-  ; http://guides.rubyonrails.org/active_record_validations_callbacks.html#customizing-error-messages-css
-  [:.error-message] (h/clone-for [e errors]
-                        (h/html-content (common/build-error-message e user)))
-  ; https://groups.google.com/group/enlive-clj/browse_thread/thread/2725d46c018beb7
-  ; Remember that set-attr returns a function (as any other Enlive
-  ; transformation function) that expects an element (the matching element).
-  ; (see p. 550 of "Clojure Programming")
-  ; About the nested vectors, see p. 549 of "Clojure Programming".
-  ; See also "Selectors 101" in
-  ; https://github.com/cgrand/enlive
-  [[:input (h/attr= :type "text")]] (common/set-field-value-from-model user))
-
-
 ; https://github.com/ibdknox/Noir-blog/blob/master/src/noir_blog/views/admin.clj
-(defpage "/login" {:as user}
+(defn new-session-action [user]
   (if (session/get :user-id)
       (resp/redirect "/")
       (common/layout {:title (i18n/translate :login-page-title)
                       :nav nil
                       :content (login-content user (vali/get-errors))})))
 
-
-(defpage [:post "/login"] {:as credentials}
+(defn create-session-action [credentials]
   (if-let [user (users/login! credentials)]
       (do
         (save-user-info-in-session user)
         (common/redirect-back-or-default "/"))
-      (render "/login" credentials)))
-
+      ;(render "/login" credentials)))
+      (new-session-action credentials)))
 
 ; The reason why logouts are handled through HTTP POST instead of GET is to
 ; avoid that someone could log out a user by having him load a page containing
 ; an image tag like
 ;   <img src="http://example.com/logout" />
 ; http://stackoverflow.com/a/3522013/974795
-(defpage [:post "/logout"] {}
+(defn logout-action []
   ; http://webnoir.org/autodoc/1.2.1/noir.session-api.html#noir.session/clear!
   (session/clear!)
   (resp/redirect "/"))
 
+(defroutes users-routes
+  ; https://github.com/weavejester/compojure/wiki/Destructuring-Syntax
+  (GET "/signup" {params :params}
+    (new-user-action params))
+  (POST "/signup" {params :params}
+    (create-user-action params))
+  (GET "/login" {params :params}
+    (new-session-action params))
+  (POST "/login" {params :params}
+    (create-session-action params))
+  (GET "/activate/:activation-code" [activation-code]
+    (activate-action activation-code))
+  (POST "/resend-activation" [email]
+    (resend-activation-action email))
+  (POST "/logout" []
+    (logout-action)))
 
 
 ; Deletes the current user's account
-; https://github.com/ibdknox/fetch
+; https://github.com/shoreleave/shoreleave-remote-ring
 (defremote delete-account []
   (when-let [user-id (session/get :user-id)]
         (users/delete! user-id)
         ; session/clear! returns an empty map, see the source (take into
         ; account that reset! returns the new value set 
         ;   http://clojuredocs.org/clojure_core/clojure.core/reset! )
-        ; http://webnoir.org/autodoc/1.2.1/noir.session-api.html#noir.session/clear!
+        ; https://github.com/noir-clojure/lib-noir/blob/master/src/noir/session.clj
         (session/clear!)))
-

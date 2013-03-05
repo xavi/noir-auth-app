@@ -1,7 +1,7 @@
 (ns noir-auth-app.client.main
 	(:require [jayq.core :as jq]
-            [fetch.remotes :as remotes]))
-
+            [shoreleave.remotes.common :as shoreleave-common]
+            [shoreleave.remotes.http-rpc :as rpc]))
 
 ; Handling AJAX callbacks
 ;
@@ -100,51 +100,34 @@
         ; notice the use of jQuery's data function to get the HTML5 data-* attribute
         ; http://api.jquery.com/data/
         ;
-        ; fetch uses pr-str to serialize things
-        ;   https://github.com/ibdknox/fetch/blob/master/src/fetch/remotes.cljs
-        ; pr-str serializes JavaScript's undefined as the empty string (try
-        ; (pr-str undefined) in http://himera.herokuapp.com , and compare it
-        ; with (pr-str "")).
-        ; In fetch's server-side, params are deserialized with Clojure's
-        ; read-string
-        ;   https://github.com/ibdknox/fetch/blob/master/src/noir/fetch/remotes.clj
-        ; read-string produces an exception when its argument is "" 
-        ; (vs. "\"\"")
-        ;   http://clojuredocs.org/clojure_core/clojure.core/read-string
-        ; So, fetch doesn't allow to pass undefined to a remote function.
-        ; Actually, it makes sense, because undefined doesn't exist in
-        ; Clojure. To work around this, undefined params are sent as nil.
-        ; OTOH, as Clojure supports arity overloading, how to distinguish
-        ; between a call to a remote function with no arguments and a call to
-        ; the same function with a nil argument?
-        ; Well, in the server side, the params are read with read-string and
-        ; then the remote function is called with 'apply'
-        ;   https://github.com/ibdknox/fetch/blob/master/src/noir/fetch/remotes.clj
-        ; If f is a function with no arguments, then this works...
-        ;   (apply f nil)
-        ; If f is a function with one argument and it has to be called with a
-        ; nil value for that argument then it should be called like this...
-        ;   (apply f [nil])
-        ; That's the reason of the params conversions below. In summary, to
-        ; specify a parameter in the HTML code for the remote function use...
+        ; To specify a parameter in the HTML code for the remote function use...
         ;   data-params="<param-value>"
         ; To specify the empty string as the parameter...
         ;   data-params=""
         ; To specify no parameters, simply do not write the data-params
         ; attribute.
         (let [$me (jq/$ me)
-              confirm (jq/data $me :confirm)
-              action (jq/data $me :action)
+              ; Previously using 'confirm' as the symbol name, but it
+              ; conflicted with JavaScript's confirm() function, resulting
+              ; in...
+              ;   TypeError: string is not a function
+              ; The generated code looked like...
+              ;   if(cljs.core.truth_(confirm(confirm))) {
+              ; Oddly, there was no conflict when using an older version of
+              ; lein-cljsbuild which probably was using an older version of
+              ; the ClojureScript compiler
+              ; https://github.com/emezeske/lein-cljsbuild#clojurescript-version
+              data-confirm (jq/data $me :confirm)
+              action (keyword (jq/data $me :action))
               params (jq/data $me :params)
               ; referring to undefined without the js/ prefix was causing
               ; WARNING: Use of undeclared Var noir-auth-app.client.main/undefined
               params (if (= params js/undefined) nil [params])
               callback (jq/data $me :callback)]
-          (when (js/confirm confirm)
-                ; http://www.chris-granger.com/2012/02/20/overtone-and-clojurescript/
-                (remotes/remote-callback action
-                                         params
-                                         ((keyword callback) callbacks)))))))
+          (when (js/confirm data-confirm)
+                (rpc/remote-callback action
+                                     params
+                                     ((keyword callback) callbacks)))))))
 
 
 ; This allows to specify links in HTML that will send POST requests

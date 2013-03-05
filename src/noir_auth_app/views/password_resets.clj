@@ -2,9 +2,12 @@
 ;; http://en.wikibooks.org/wiki/Clojure_Programming/Concepts#Load_and_Reload
 ;; http://stackoverflow.com/questions/6709131/what-are-clojures-naming-conventions#comment7945879_6709278
 (ns noir-auth-app.views.password-resets
-  (use noir.core)
-  (use hiccup.page-helpers)
   
+  ;(use noir.core)
+  ;(use hiccup.page-helpers)
+
+  (:use [compojure.core :only (defroutes GET POST PUT)]
+        [hiccup.util :only (url)])
   (:require [net.cgrand.enlive-html :as h]
             [noir.session :as session]
             [noir.validation :as vali]
@@ -35,39 +38,6 @@
   [[:input (h/attr= :type "text")]] (common/set-field-value-from-model user))
 
 
-(defpage "/password-resets" {:keys [email] :as params}
-  ; Called when the forgot password link is clicked, but
-  ; /password-resets/:reset-code/edit also redirects here when there are
-  ; errors, which are stored in the flash under the :reset-code-errors key.
-  (let [errors (or (:reset-code-errors (session/flash-get))
-                   (vali/get-errors))]
-    (common/layout {:title (i18n/translate :forgot-password-page-title)
-                    :nav (common/navigation-menu)
-                    :content (new-content params errors)})))
-
-
-; It's ok to provide an email for a not yet activated account, see comments in
-; the change-password-with-reset-code! function for details.
-;
-(defpage [:post "/password-resets"] {:keys [email] :as params}
-  (if-let [reset-code (users/set-password-reset-code! email)]
-    (do (future
-            (mailer/send-email 
-                {:from config/emails-from
-                 :to email
-                 :subject "How to reset your password"
-                 :body (str "Hi!\n\n"
-                            "If you have forgotten your " config/app-name
-                            " password, you can choose a new one by using "
-                            "the form linked below:\n\n"
-                            (common/base-url)
-                            "/password-resets/" reset-code "/edit")}))
-        (session/flash-put!
-            (i18n/translate :password-change-instructions-sent))
-        (resp/redirect "/login"))
-    (render "/password-resets" params)))
-
-
 (h/defsnippet edit-content
               "public/password-resets/edit.html" [:.content :> h/any-node]
   [params errors]
@@ -95,7 +65,42 @@
     (common/set-field-value-from-model params))
 
 
-(defpage "/password-resets/:reset-code/edit" {:keys [reset-code] :as params}
+;;; Actions
+
+
+;(defpage "/password-resets" {:keys [email] :as params}
+(defn new-action [{:keys [email] :as params}]
+  ; Called when the forgot password link is clicked, but
+  ; /password-resets/:reset-code/edit also redirects here when there are
+  ; errors, which are stored in the flash under the :reset-code-errors key.
+  (let [errors (or (session/flash-get :reset-code-errors) (vali/get-errors))]
+    (common/layout {:title (i18n/translate :forgot-password-page-title)
+                    :nav (common/navigation-menu)
+                    :content (new-content params errors)})))
+
+
+; It's ok to provide an email for a not yet activated account, see comments in
+; the change-password-with-reset-code! function for details.
+;
+(defn create-action [{:keys [email] :as params}]
+  (if-let [reset-code (users/set-password-reset-code! email)]
+    (do (future
+            (mailer/send-email
+                {:from config/emails-from
+                 :to email
+                 :subject "How to reset your password"
+                 :body (str "Hi!\n\n"
+                            "If you have forgotten your " config/app-name
+                            " password, you can choose a new one by using "
+                            "the form linked below:\n\n"
+                            (common/base-url)
+                            "/password-resets/" reset-code "/edit")}))
+        (session/flash-put!
+            :notice (i18n/translate :password-change-instructions-sent))
+        (resp/redirect "/login"))
+    (new-action params)))
+
+(defn edit-password-action [{:keys [reset-code] :as params}]
   (if (users/validate-existing-password-reset-code reset-code)
 
       ; When the new password sent via HTTP PUT to "/password-resets" is
@@ -115,17 +120,30 @@
             ; this page when there are errors on :password_reset_code, and as
             ; this page also validates the reset code, errors are duplicated
             error-keywords (distinct (vali/get-errors))]
-        (session/flash-put! {:reset-code-errors error-keywords})
+        (session/flash-put! :reset-code-errors error-keywords)
         (resp/redirect (url "/password-resets" {:email email})))))
 
 
-(defpage [:put "/password-resets/:reset-code"] {:keys [reset-code password] :as params}
+(defn update-password-action [{:keys [reset-code password] :as params}]
   (if (users/change-password-with-reset-code! reset-code password)
-      (do (session/flash-put! "Password changed successfully.")
+      (do (session/flash-put! :notice "Password changed successfully.")
           (resp/redirect "/login"))
       ; TODO:
       ; if all errors are on :password_reset_code, maybe should redirect to
       ; "/password-resets" directly, intead of the render below, which in this
       ; case will end up redirecting to "/password-resets" anyway
-      (render "/password-resets/:reset-code/edit" params)))
+      ;(render "/password-resets/:reset-code/edit" params)))
+      (edit-password-action params)))
+
+
+(defroutes password-resets-routes
+  ; https://github.com/weavejester/compojure/wiki/Destructuring-Syntax
+  (GET "/password-resets" {params :params}
+    (new-action params))
+  (POST "/password-resets" {params :params}
+    (create-action params))
+  (GET "/password-resets/:reset-code/edit" {params :params}
+    (edit-password-action params))
+  (PUT "/password-resets/:reset-code" {params :params}
+    (update-password-action params)))
 

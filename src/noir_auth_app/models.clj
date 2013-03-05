@@ -83,7 +83,7 @@
       (set-connection! (make-connection mongo-url))
 
       ; https://github.com/aboekhoff/congomongo/blob/master/src/somnium/congomongo.clj
-      ; http://api.mongodb.org/java/2.7.3/com/mongodb/WriteConcern.html
+      ; http://api.mongodb.org/java/2.10.1/com/mongodb/WriteConcern.html
       (set-write-concern *mongo-config* :safe)
 
       (user/maybe-init))))
