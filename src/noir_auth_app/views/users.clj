@@ -53,7 +53,7 @@
   ; problem is that sniptest returns a string, and when this string is
   ; inserted by deftemplate into the final HTML using Enlive's transformation
   ; function content, it's escaped. That's why the result of sniptest is
-  ; post-processed by by html-snippet.
+  ; post-processed by html-snippet.
   ; https://github.com/cgrand/enlive/blob/master/src/net/cgrand/enlive_html.clj
   ; The html-snippet function concatenates the passed strings and returns a
   ; sequence of maps representing HTML elements (the same type of data
