@@ -32,7 +32,7 @@ If user is not logged in, it displays a generic welcome message and a login link
 
 If user is logged in, it displays a personalized greeting and links to settings and logout.
 
-If there's a message in the [flash](http://webnoir.org/tutorials/sessions), it's also displayed.
+If the [flash](http://yogthos.github.com/lib-noir/noir.session.html#var-flash-get) contains a value for the key `:notice, it's also displayed.
 
 
 ### Signup
