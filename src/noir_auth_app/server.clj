@@ -11,6 +11,7 @@
         [noir.session :only (mem wrap-noir-session wrap-noir-flash)]
         [noir-auth-app.views.home :only (home-routes)]
         [noir-auth-app.views.users :only (users-routes)]
+        [noir-auth-app.views.password-resets :only (password-resets-routes)]
         [noir-auth-app.views.settings :only (settings-routes)]
         [noir-auth-app.views.admin :only (admin-routes)])
   (:require [ring.adapter.jetty :as ring]
@@ -49,6 +50,7 @@
 (defroutes app-routes
   home-routes
   users-routes
+  password-resets-routes
   settings-routes
   admin-routes
   ; http://weavejester.github.com/compojure/compojure.route.html
