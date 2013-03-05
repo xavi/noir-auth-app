@@ -225,7 +225,7 @@ foreman start
 
 ## License
 
-Copyright (C) 2012 Xavi Caballé
+Copyright (C) 2012–2013 Xavi Caballé
 
 Distributed under the Eclipse Public License, the same as Clojure.
 
