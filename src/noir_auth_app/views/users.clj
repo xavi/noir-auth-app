@@ -196,7 +196,6 @@
                     :nav (common/navigation-menu)
                     :content (errors-content (vali/get-errors))})))
 
-; https://github.com/ibdknox/Noir-blog/blob/master/src/noir_blog/views/admin.clj
 (defn new-session-action [user]
   (if (session/get :user-id)
       (resp/redirect "/")
