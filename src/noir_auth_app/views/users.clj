@@ -124,8 +124,6 @@
     (do (email-activation-code saved-user)
         (session/flash-put! :notice (i18n/translate :activation-code-sent))
         (resp/redirect "/login"))
-    ; http://webnoir.org/autodoc/1.2.1/noir.core-api.html#noir.core/render
-    ;(render "/signup" new-user)))
     (new-user-action new-user)))
 
 ; Should the activation/password resets tokens expire? YES
@@ -211,7 +209,6 @@
       (do
         (save-user-info-in-session user)
         (common/redirect-back-or-default "/"))
-      ;(render "/login" credentials)))
       (new-session-action credentials)))
 
 ; The reason why logouts are handled through HTTP POST instead of GET is to
@@ -220,7 +217,6 @@
 ;   <img src="http://example.com/logout" />
 ; http://stackoverflow.com/a/3522013/974795
 (defn logout-action []
-  ; http://webnoir.org/autodoc/1.2.1/noir.session-api.html#noir.session/clear!
   (session/clear!)
   (resp/redirect "/"))
 
