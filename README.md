@@ -192,7 +192,7 @@ which, once URL encoded, becomes
 
 This is handled by `(defremote delete-user [user-id] ...)`. If the logged in user is an admin, it deletes the user specified in the POST data, and it returns 1 if successful, 0 otherwise.
 
-From `/admin`, when following the "Delete" link for a user, the ClojureScript code in main.cljs, after asking for confirmation, uses [fetch](https://github.com/ibdknox/fetch)'s `remote-callback` to call `delete-user` on the server (internally, fetch makes the HTTP POST).
+From `/admin`, when following the "Delete" link for a user, the ClojureScript code in main.cljs, after asking for confirmation, uses [shoreleave-remote](https://github.com/shoreleave/shoreleave-remote)'s `remote-callback` to call `delete-user` on the server (internally, shoreleave-remote makes the HTTP POST).
 
 
 ## Install
