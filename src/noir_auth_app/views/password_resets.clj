@@ -2,10 +2,6 @@
 ;; http://en.wikibooks.org/wiki/Clojure_Programming/Concepts#Load_and_Reload
 ;; http://stackoverflow.com/questions/6709131/what-are-clojures-naming-conventions#comment7945879_6709278
 (ns noir-auth-app.views.password-resets
-  
-  ;(use noir.core)
-  ;(use hiccup.page-helpers)
-
   (:use [compojure.core :only (defroutes GET POST PUT)]
         [hiccup.util :only (url)])
   (:require [net.cgrand.enlive-html :as h]

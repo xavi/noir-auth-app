@@ -6,12 +6,6 @@
         [hiccup.page :only [include-js]]
         [hiccup.element :only [javascript-tag]]
         [hiccup.util :only [escape-html url]])
-
-        ; [noir.core :only [defpartial]]
-        ; [hiccup.core :only [escape-html]]
-        ; [hiccup.page-helpers :only [include-css include-js javascript-tag
-        ;                             html5 link-to url]])
-
   (:require [net.cgrand.enlive-html :as h]
             [noir-auth-app.models.user :as users]
             [noir-auth-app.i18n :as i18n]
