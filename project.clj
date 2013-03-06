@@ -2,7 +2,7 @@
 ; project.clj file see
 ; https://github.com/technomancy/leiningen/blob/master/sample.project.clj
 (defproject noir-auth-app "0.3.0-SNAPSHOT"
-  :description "A complete authentication web app based on Clojure/ClojureScript, Noir, Enlive and MongoDB."
+  :description "A complete authentication web app based on Clojure/ClojureScript, Compojure, lib-noir, Enlive and MongoDB."
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [ring/ring-jetty-adapter "1.1.8"]
                  [compojure "1.1.5"]
