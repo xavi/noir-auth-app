@@ -46,10 +46,30 @@
 ; p. 551 of "Clojure Programming"
 ; https://github.com/swannodette/enlive-tutorial/blob/master/src/tutorial/template3.clj
 (h/defsnippet not-logged-in-nav "public/navs.html" [:#not-logged-in-nav] [])
-(h/defsnippet logged-in-nav "public/navs.html" [:#logged-in-nav] [])
+(h/defsnippet logged-in-nav "public/navs.html" [:#logged-in-nav]
+  []
+  [:.admin-nav-item] #(when (session/get :admin) %))
 
 (defn navigation-menu []
-  (if (current-user) (logged-in-nav) (not-logged-in-nav)))
+  ; Before using (doall) below there was this exception
+  ;   java.lang.ClassCastException: clojure.lang.Var$Unbound cannot be cast to clojure.lang.IDeref
+  ; The reason is that logged-in-nav, like all defsnippet functions, yields a
+  ; lazy sequence (the 'class' function can be used to check this) and by the
+  ; time it's realized by Ring (which allows a sequence in :body, see
+  ; https://github.com/ring-clojure/ring/wiki/Concepts) the lib-noir's
+  ; session dynamic var is not bound anymore. Chas Emerick explains this and
+  ; provides a general solution in the form of a middleware here
+  ;   https://groups.google.com/d/topic/enlive-clj/0WOG2CDqUDY/discussion
+  ; For the moment though, I've decided to just solve this specific case
+  ; using 'doall' to avoid the overhead that the general solution imposes on
+  ; every request.
+  ; On the other hand, like Christophe Grand says, this is something that
+  ; should probably be solved in the wrap-noir-session middleware:
+  ; "Given that per Ring's spec, :body may be lazy seqs, I would tend to say
+  ; that it's up to the authors of middlewares which introduce dynamic
+  ; binding to ensure that this case is covered."
+  ; https://groups.google.com/d/topic/enlive-clj/CKuJHxaHkGY/discussion
+  (if (current-user) (doall (logged-in-nav)) (not-logged-in-nav)))
 
 
 ;; Layouts

@@ -156,7 +156,8 @@
         page-users 
             (if next-page-first-created-at (butlast users-batch) users-batch)]
 
-    (common/admin-layout
+    (doall  ; see comment in common/navigation-menu
+      (common/admin-layout
         {:title (i18n/translate :admin-page-title)
          :nav (common/navigation-menu)
          :content
@@ -167,7 +168,7 @@
                             :truncated-users-fields truncated-users-fields
                             :page-users page-users
                             :next-page-first-created-at
-                                next-page-first-created-at})})))
+                                next-page-first-created-at})}))))
 
 
 (defroutes admin-routes

@@ -34,7 +34,7 @@
 
 
 (defn save-user-info-in-session [{:keys [_id lowercase_username]}]
-  (when true ;(= lowercase_username "admin") 
+  (when true  ;(= lowercase_username "admin")
         (session/put! :admin true))
   (session/put! :user-id _id))
 
