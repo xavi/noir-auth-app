@@ -70,7 +70,7 @@ Shows the login form if not logged in, otherwise redirects to `/`.
 
 #### `POST /login`
 
-Logs in the user if credentials are correct. It's possible to log in by username and password, or email and password. If the session object contains a :return-to key, removes it and redirects to the URL stored in that key, otherwise redirects to `/`. This works in conjunction with the `ensure-logged-in` function, which is called through `pre-route` before serving any page that requires authentication, to redirect not logged in users to the login form and then, once logged in, back to the originally requested page.
+Logs in the user if credentials are correct. It's possible to log in by username and password, or email and password. If the session object contains a :return-to key, removes it and redirects to the URL stored in that key, otherwise redirects to `/`. This works in conjunction with the `ensure-logged-in` macro, which is called before serving any page that requires authentication, to redirect not logged in users to the login form and then, once logged in, back to the originally requested page.
 
 When logging in, the user id is stored in the session object. If the account is an admin account, an :admin entry with the value of true is also stored in the session. Which account is an admin account is decided in the `save-user-info-in-session` function (by default, the admin account is the account with the "admin" username).
 
@@ -97,7 +97,7 @@ If the user is logged in, the submitted username is checked for length, valid ch
 
 The user is then redirected to `/settings` and, if there are errors, appropriate messages are shown.
 
-If the user is not logged in, it redirects to `/login` (see `pre-route` in the source code).
+If the user is not logged in, it redirects to `/login` (see `ensure-logged-in` in the source code).
 
 #### `POST /email-changes`
 
