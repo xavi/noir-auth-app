@@ -10,4 +10,8 @@
 ; https://github.com/technomancy/leiningen/blob/stable/doc/TUTORIAL.md
 ; https://github.com/technomancy/leiningen/blob/stable/doc/FAQ.md
 ; https://github.com/technomancy/leiningen/wiki/Faster
-web: lein trampoline run
+;
+;; 'trampoline' cannot be used because of a bug in lein-cljsbuild
+;; https://github.com/technomancy/leiningen/issues/956
+;;web: lein with-profile $APP_ENV trampoline run
+web: lein with-profile $APP_ENV run

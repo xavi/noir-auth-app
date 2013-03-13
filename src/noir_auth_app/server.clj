@@ -4,6 +4,7 @@
                          params]
         [ring.middleware.session.memory :only (memory-store)]
         [ring.middleware.file-info :only (wrap-file-info)]
+        [ring.middleware.reload :only (wrap-reload)]
         [ring.middleware.multipart-params :only (wrap-multipart-params)]
         [compojure.core :only (defroutes)]
         [noir.validation :only (wrap-noir-validation)]
@@ -35,6 +36,18 @@
   (route/resources "/")
   (route/not-found "Not found"))
 
+; http://mmcgrana.github.com/2010/07/develop-deploy-clojure-web-applications.html
+(defn wrap-if [handler pred wrapper & args]
+  (if pred
+      (apply wrapper handler args)
+      handler))
+
+(def production?
+  (= "production" (get (System/getenv) "APP_ENV")))
+
+(def development?
+  (not production?))
+
 ; lib-noir's app-handler takes a sequential collection of routes and returns
 ; a handler wrapped in Noir's base middleware
 ; http://yogthos.github.com/lib-noir/noir.util.middleware.html
@@ -50,15 +63,44 @@
 ; shoreleave-remote-ring
 ; https://github.com/shoreleave/shoreleave-remote-ring
 ;
+; When running in the development environment, wrap-reload will check on each
+; request if any source files have been modified, and if so, will reload the
+; namespaces defined in those files plus any other depending namespaces. Ex.
+; if /noir-auth-app/views/home.clj is modified, then on the next request,
+; noir-auth-app.views.home and noir-auth-app.server will be reloaded (because
+; the latter depends on the former). This can be checked by adding a
+;   (println *ns* "reloaded")
+; on both files (home.clj and server.clj). Now if home.clj is modified, when
+; the next is served both messages will be printed in the log.
+; http://ring-clojure.github.com/ring/ring.middleware.reload.html
+;
+; A key detail for this auto-reload to have the desired effect is to
+; reference app-routes as a var (#'app-routes expands to (var app-routes)
+; http://clojure.org/special_forms#var). This way, the handler function
+; 'application', which is passed to run-jetty, will look up the value of
+; app-routes on each request, and because this namespace will have been
+; reloaded by wrap-reload by then (if the file of another namespace on which
+; it depends has been modified), app-routes will have been re-evaluated and
+; so it will now have the updated code.
+;
+; If app-routes were referenced as a symbol (i.e. app-routes), then it would
+; be evaluated when "application" is defined, and its value passed as-is, as
+; part of the "application" value, to the run-jetty call below. So, if later
+; this namespace were reloaded by wrap-reload because a file changed, then
+; although "application" would be re-evaluated, this wouldn't affect the
+; value that run-jetty was passed when it was started. So the old handler
+; would still be serving the requests and the change wouldn't have any
+; effect.
+;
 ; The order is important! (ex. in order for the app-routes handler to respond
 ; to a Ring request it may need to use sessions, and these will only be
 ; available if wrap-noir-session middleware, which is part of Noir's base
 ; middleware, has already been executed for that request)
-(def application (-> app-routes
+(def application (-> #'app-routes
                      shoreleave/wrap-rpc
                      ; api handler includes wrap-keyword-params,
                      ; wrap-nested-params, and wrap-params
-                     ; (these 3 middlewares are requred by
+                     ; (these 3 middlewares are required by
                      ; shoreleave-remote-ring)
                      ; https://github.com/weavejester/compojure/blob/master/src/compojure/handler.clj
                      ; https://github.com/ring-clojure/ring/blob/master/ring-core/src/ring/middleware/keyword_params.clj
@@ -71,7 +113,8 @@
                      wrap-noir-validation
                      wrap-noir-cookies
                      wrap-noir-flash
-                     (wrap-noir-session {:store (memory-store mem)})))
+                     (wrap-noir-session {:store (memory-store mem)})
+                     (wrap-if development? wrap-reload ["src/clj"])))
 
 (defn start [port]
   (ring/run-jetty application {:port port :join? false}))
