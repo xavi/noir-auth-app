@@ -19,9 +19,12 @@
 ; http://items.sjbach.com/567/critiquing-clojure#2
 (declare store-location current-user)
 
-(def cljs-build (if (= (get (System/getenv) "APP_ENV") "dev")
-                    "/js/cljs-debug.js"
-                    "/js/cljs.js"))
+(defn cljs-build []
+  (let [cljs-build (or (:cljs-build (:params *request*))
+                       (get (System/getenv) "APP_ENV"))]
+    (if (= cljs-build "dev")
+        "/js/cljs-debug.js"
+        "/js/cljs.js")))
 
 (defn include-client-code []
   (html
@@ -40,7 +43,7 @@
     ; Loads jQuery from Google's CDN ( http://jquery.com/download/ )
     ; This matches the version of jQuery in /externs/jquery.js
     (include-js "//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js")
-    (include-js cljs-build)))
+    (include-js (cljs-build))))
 
 ; The third argument to defsnippet is a selector that indicates the root
 ; element within the loaded HTML file to which transformations should be

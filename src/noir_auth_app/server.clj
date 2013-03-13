@@ -99,6 +99,7 @@
 ; middleware, has already been executed for that request)
 (def application (-> #'app-routes
                      shoreleave/wrap-rpc
+                     noir/wrap-request-map
                      ; api handler includes wrap-keyword-params,
                      ; wrap-nested-params, and wrap-params
                      ; (these 3 middlewares are required by
@@ -108,9 +109,8 @@
                      ; https://github.com/ring-clojure/ring/blob/master/ring-core/src/ring/middleware/nested_params.clj
                      ; https://github.com/ring-clojure/ring/blob/master/ring-core/src/ring/middleware/params.clj
                      handler/api
-                     wrap-file-info
                      wrap-multipart-params
-                     noir/wrap-request-map
+                     wrap-file-info
                      wrap-noir-validation
                      wrap-noir-cookies
                      wrap-noir-flash
