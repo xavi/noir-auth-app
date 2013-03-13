@@ -73,6 +73,7 @@
 ; on both files (home.clj and server.clj). Now if home.clj is modified, when
 ; the next is served both messages will be printed in the log.
 ; http://ring-clojure.github.com/ring/ring.middleware.reload.html
+; https://github.com/ring-clojure/ring/blob/master/ring-devel/src/ring/middleware/reload.clj
 ;
 ; A key detail for this auto-reload to have the desired effect is to
 ; reference app-routes as a var (#'app-routes expands to (var app-routes)
@@ -114,7 +115,7 @@
                      wrap-noir-cookies
                      wrap-noir-flash
                      (wrap-noir-session {:store (memory-store mem)})
-                     (wrap-if development? wrap-reload ["src/clj"])))
+                     (wrap-if development? wrap-reload {:dirs ["src"]})))
 
 (defn start [port]
   (ring/run-jetty application {:port port :join? false}))
