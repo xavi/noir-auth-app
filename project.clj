@@ -55,14 +55,16 @@
   ; approximately half of this time is consumed compiling ClojureScript with
   ; advanced optimizations.
   ;
-  ; Date, Total Time, ClojureScript Advanced Compilation Time
+  ; Date, Total Time, ClojureScript Advanced Optimizations Time, ClojureScript Whitespace Optimizations Time
   ; 2013-07-15 17:40, 7 min 7 s, 233 s (3 min 53 s)
+  ; 2013-07-15 17:55, 6 min 3 s, 181 s (3 min 1 s), 13 s
   ;
   ; In contrast, it only takes 1 min 15 s to generate the jar with
   ; "lein uberjar" in my MBP (2.26 GHz Intel Core 2 Duo)
   ;
-  ; Date, Total Time, ClojureScript Advanced Compilation Time
+  ; Date, Total Time, ClojureScript Advanced Optimizations Time, ClojureScript Whitespace Optimizations Time
   ; 2013-07-15 17:50, 1 min 15 s, 25 s
+  ; 2013-07-15 18:07, 1 min 25 s, 26 s, 16 s
   ;
   ; https://devcenter.heroku.com/articles/clojure
   ; https://github.com/heroku/heroku-buildpack-clojure#uberjar
