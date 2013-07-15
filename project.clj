@@ -51,9 +51,19 @@
   :min-lein-version "2.0.0"
   :main noir-auth-app.server
   :source-paths ["src"]
-  ; Deployment to Heroku may take more than 4 minutes. It seems that
+  ; Deployment to Heroku may take more than 7 minutes. It seems that
   ; approximately half of this time is consumed compiling ClojureScript with
   ; advanced optimizations.
+  ;
+  ; Date, Total Time, ClojureScript Advanced Compilation Time
+  ; 2013-07-15 17:40, 7 min 7 s, 233 s (3 min 53 s)
+  ;
+  ; In contrast, it only takes 1 min 15 s to generate the jar with
+  ; "lein uberjar" in my MBP (2.26 GHz Intel Core 2 Duo)
+  ;
+  ; Date, Total Time, ClojureScript Advanced Compilation Time
+  ; 2013-07-15 17:50, 1 min 15 s, 25 s
+  ;
   ; https://devcenter.heroku.com/articles/clojure
   ; https://github.com/heroku/heroku-buildpack-clojure#uberjar
   ; https://github.com/heroku/heroku-buildpack-clojure/issues/22#issuecomment-19766340
