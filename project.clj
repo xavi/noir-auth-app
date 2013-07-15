@@ -15,7 +15,7 @@
                  [jayq "2.3.0"]
                  [shoreleave/shoreleave-remote-ring "0.3.0"]
                  [shoreleave/shoreleave-remote "0.3.0"]]
-  :plugins [[lein-cljsbuild "0.3.1"]]
+  :plugins [[lein-cljsbuild "0.3.2"]]
    ;; Load these namespaces from within Leiningen to pick up hooks from them.
    ;; See "Hooking Into Default Leiningen Tasks" in p. 83 of
    ;; Sierra & VanderHart's "ClojureScript: Up and Running"
@@ -50,4 +50,8 @@
   ; besides warning users of earlier versions of Leiningen, this also forces Heroku to use 2.x
   :min-lein-version "2.0.0"
   :main noir-auth-app.server
-  :source-paths ["src"])
+  :source-paths ["src"]
+  ; https://devcenter.heroku.com/articles/clojure
+  ; https://github.com/heroku/heroku-buildpack-clojure#uberjar
+  ; https://github.com/heroku/heroku-buildpack-clojure/issues/22#issuecomment-19766340
+  :uberjar-name "noir-auth-app-standalone.jar")
