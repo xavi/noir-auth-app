@@ -33,7 +33,7 @@
         ; https://github.com/emezeske/lein-cljsbuild#multiple-build-configurations
         ; https://github.com/emezeske/lein-cljsbuild/blob/0.3.0/example-projects/advanced/project.clj
         :dev
-        {:source-paths ["src"]
+        {:source-paths ["src-cljs"]
          :compiler {
             ; The path to the JavaScript file that will be output.
             ; Defaults to "target/cljsbuild-main.js".
@@ -41,7 +41,7 @@
             :optimizations :whitespace
             :pretty-print true }}
         :prod
-        {:source-paths ["src"]
+        {:source-paths ["src-cljs"]
          :compiler {
             :output-to "resources/public/js/cljs.js"
             :optimizations :advanced
@@ -51,6 +51,9 @@
   :min-lein-version "2.0.0"
   :main noir-auth-app.server
   :source-paths ["src"]
+  ; Deployment to Heroku may take more than 4 minutes. It seems that
+  ; approximately half of this time is consumed compiling ClojureScript with
+  ; advanced optimizations.
   ; https://devcenter.heroku.com/articles/clojure
   ; https://github.com/heroku/heroku-buildpack-clojure#uberjar
   ; https://github.com/heroku/heroku-buildpack-clojure/issues/22#issuecomment-19766340

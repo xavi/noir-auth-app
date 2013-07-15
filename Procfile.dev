@@ -1,0 +1,5 @@
+# Usage
+# 	foreman start --procfile Procfile.dev
+#
+# https://devcenter.heroku.com/articles/clojure#declare-process-types-with-procfile
+web: lein run -m noir-auth-app.server
