@@ -13,12 +13,12 @@
 
 
 (defn- email-activation-code [{:keys [email username activation_code]}]
-  (future (mailer/send-email 
+  (future (mailer/send-email
               {:from config/emails-from
                :to email
                :subject "Account activation"
                :body (str "Hi " username ",\n\n"
-                          "To activate your " config/app-name 
+                          "To activate your " config/app-name
                           " account just follow the link below:\n\n"
                           (str (common/base-url) "/activate/" activation_code)
                           "\n\nCheers!")})))
@@ -63,7 +63,7 @@
       (h/sniptest "<p class=\"error-message\">Sample error message.</p>"
         [:.error-message]
             (h/clone-for [e errors]
-                  (h/html-content 
+                  (h/html-content
                         (common/build-error-message e interpolation-map))))))
 
 
@@ -97,20 +97,6 @@
 
 ; Besides the typical case of signing up when not logged in, it's also
 ; possible to sign up for an account while logged in with another account.
-;
-; The destructuring form used here is just like the one you'd use in a (let)
-; form, so you can use all of clojure's powerful destructuring concepts.
-; http://webnoir.org/tutorials/routes
-; Note that
-;   (defpage "/signup" [new-user]
-; doesn't work, it produces
-; java.lang.UnsupportedOperationException: nth not supported on this type: PersistentArrayMap
-; Same for
-;   (defpage "/signup" [{:as new-user}]
-; It makes sense because the square brackets here don't have to confused as
-; the parameters of a function, as they are actually the second parameter of
-; defpage, which is a destructuring form for the params of the request
-;   http://webnoir.org/tutorials/routes
 ;
 (defn new-user-action [user]
   (common/layout {:title (i18n/translate :signup-page-title)
@@ -243,7 +229,7 @@
   (when-let [user-id (session/get :user-id)]
         (users/delete! user-id)
         ; session/clear! returns an empty map, see the source (take into
-        ; account that reset! returns the new value set 
+        ; account that reset! returns the new value set
         ;   http://clojuredocs.org/clojure_core/clojure.core/reset! )
         ; https://github.com/noir-clojure/lib-noir/blob/master/src/noir/session.clj
         (session/clear!)))

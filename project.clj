@@ -3,7 +3,7 @@
 ; https://github.com/technomancy/leiningen/blob/master/sample.project.clj
 (defproject noir-auth-app "0.3.0-SNAPSHOT"
   :description "A complete authentication web app based on Clojure/ClojureScript, Compojure, lib-noir, Enlive and MongoDB."
-  :dependencies [[org.clojure/clojure "1.4.0"]
+  :dependencies [[org.clojure/clojure "1.5.1"]
                  [ring/ring-jetty-adapter "1.1.8"]
                  [compojure "1.1.5"]
                  [hiccup "1.0.2"]
@@ -15,7 +15,7 @@
                  [jayq "2.3.0"]
                  [shoreleave/shoreleave-remote-ring "0.3.0"]
                  [shoreleave/shoreleave-remote "0.3.0"]]
-  :plugins [[lein-cljsbuild "0.3.0"]]
+  :plugins [[lein-cljsbuild "0.3.1"]]
    ;; Load these namespaces from within Leiningen to pick up hooks from them.
    ;; See "Hooking Into Default Leiningen Tasks" in p. 83 of
    ;; Sierra & VanderHart's "ClojureScript: Up and Running"

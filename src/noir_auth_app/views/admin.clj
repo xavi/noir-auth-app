@@ -182,6 +182,5 @@
 ; https://github.com/shoreleave/shoreleave-remote-ring
 (defremote delete-user [user-id]
   (when (session/get :admin)
-        ; https://github.com/aboekhoff/congomongo/issues/77
         (println "admin will delete" user-id)
         (users/delete! user-id)))
